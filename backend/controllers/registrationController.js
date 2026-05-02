@@ -63,4 +63,21 @@ const getRegistrantsByEvent = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, getRegistrantsByEvent };
+// @desc    Delete a registrant by ID
+// @route   DELETE /api/registrations/:registrationId
+// @access  Private (admin only)
+const deleteRegistrant = async (req, res) => {
+  try {
+    const registration = await Registration.findByIdAndDelete(
+      req.params.registrationId,
+    );
+    if (!registration) {
+      return res.status(404).json({ message: "Registrant not found" });
+    }
+    res.status(200).json({ message: "Registrant deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+module.exports = { registerForEvent, getRegistrantsByEvent, deleteRegistrant };

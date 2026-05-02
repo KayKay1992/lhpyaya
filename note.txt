@@ -1,129 +1,90 @@
-===================================================
-FRONTEND — ADMIN PAGES (Step 4)
-===================================================
+====================================================
+  FEATURE: Admin Can Delete a Registrant
+====================================================
 
-FILES CHANGED
--------------
-  src/pages/AdminDashboard.jsx  — event listing with edit/delete/view registrants
-  src/pages/CreateEvent.jsx     — form with image upload → POST /api/events
-  src/pages/EditEvent.jsx       — pre-filled form → PUT /api/events/:id
-  src/pages/ViewRegistered.jsx  — registrants table → GET /api/registrations/:eventId
+OVERVIEW
+--------
+Admins can now remove individual registrants from an event directly
+from the ViewRegistered page. A "Remove" button appears on every row
+of the registrants table. Clicking it asks for confirmation, then
+permanently deletes the record from the database and removes the row
+from the screen without needing to reload the page.
 
----------------------------------------------------
-1. ADMINDASHBOARD.JSX
----------------------------------------------------
-PURPOSE
-  The main admin control panel. Lists all events in a card grid with action buttons.
+----------------------------------------------------
+BACKEND CHANGES
+----------------------------------------------------
 
-STATE
-  events     — array of all events fetched from the API.
-  loading    — true while fetching.
-  deletingId — tracks which event is being deleted to disable its button.
+1. controllers/registrationController.js
+   - Added a new async function: deleteRegistrant
+   - It receives the registration's unique ID from the URL parameter
+     (:registrationId)
+   - Uses Mongoose's findByIdAndDelete() to locate and remove the record
+   - Returns 200 with a success message if found and deleted
+   - Returns 404 if no matching registration was found
+   - Returns 500 on unexpected server errors
+   - Exported alongside the existing two functions
 
-NAVBAR
-  Shows LHP-YAYA logos, an "Admin" badge, the logged-in admin's name,
-  a "View Site" link to the landing page, and a Sign Out button that
-  calls logout() and redirects to /login.
+   Key code logic:
+     const registration = await Registration.findByIdAndDelete(req.params.registrationId);
+     if (!registration) return res.status(404).json({ message: "Registrant not found" });
+     res.status(200).json({ message: "Registrant deleted" });
 
-FETCH ON MOUNT
-  Calls GET /api/events via fetchEvents(). Extracted as a named function
-  (not inline in useEffect) so it can be called again if needed.
+2. routes/registrationRoutes.js
+   - Imported deleteRegistrant from the controller
+   - Added a new DELETE route:
+       DELETE /api/registrations/:registrationId
+   - Protected with both `protect` (JWT check) and `adminOnly` (role check)
+     middlewares, so only logged-in admins can call it
+   - The :registrationId in the URL is the MongoDB _id of the registration
+     document, NOT the event ID
 
-DELETE FLOW
-  1. window.confirm() asks for confirmation before proceeding.
-  2. Sets deletingId to the event's id (disables that card's delete button).
-  3. Calls DELETE /api/events/:id.
-  4. On success: filters the deleted event out of local state immediately —
-     no need to re-fetch the whole list.
-  5. Resets deletingId in the finally block.
+----------------------------------------------------
+FRONTEND CHANGES
+----------------------------------------------------
 
-CARD ACTIONS (per event)
-  - "Registrants" → navigates to /view-registered?eventId=...&title=...
-  - "Edit"        → navigates to /edit-event/:id
-  - "Delete"      → triggers the delete flow above
+3. pages/ViewRegistered.jsx
+   - Added Trash2 icon import from lucide-react
+   - Added deletingId state (null when idle, holds the _id of the
+     registration currently being deleted — prevents double-clicks)
+   - Added handleDelete(id) async function:
+       * Shows window.confirm() before proceeding
+       * Calls DELETE /api/registrations/:id via the axios instance
+       * On success: filters the deleted entry out of the registrants
+         state array (instant UI update, no re-fetch needed)
+       * Shows a toast success or error message
+       * Resets deletingId to null when done
+   - Changed the table grid from grid-cols-4 to grid-cols-5 to add an
+     Actions column on the right
+   - Each row now has a "Remove" button:
+       * Shows the Trash2 icon + "Remove" label
+       * While deleting: shows "Removing..." and is disabled
+       * Styled in red tones to signal a destructive action
 
----------------------------------------------------
-2. CREATEEVENT.JSX
----------------------------------------------------
-PURPOSE
-  Admin form for creating a new event, including an optional banner image.
+----------------------------------------------------
+HOW THE FULL FLOW WORKS
+----------------------------------------------------
 
-STATE
-  form    — { title, description, date, time, location } controlled fields.
-  image   — the raw File object selected by the admin.
-  preview — a local object URL for showing the image preview before upload.
-  loading — true while the API call is in progress.
+1. Admin navigates to the Registrants page for an event
+2. The table lists all registrants with Name, Email, Phone, Date, and
+   a Remove button per row
+3. Admin clicks "Remove" on a row
+4. Browser shows: "Remove this registrant?" — admin clicks OK
+5. Frontend sends:  DELETE /api/registrations/<registrationId>
+   with the JWT token in the Authorization header
+6. Backend middleware verifies the token and confirms admin role
+7. Controller deletes the document from MongoDB
+8. Frontend receives success → filters that row out of state
+9. The row disappears instantly. Toast shows "Registrant removed"
 
-IMAGE UPLOAD UI
-  A dashed-border clickable area wraps a hidden <input type="file">.
-  When a file is selected, URL.createObjectURL() creates a temporary
-  browser-side URL to show a live preview inside the upload area.
+----------------------------------------------------
+SECURITY NOTES
+----------------------------------------------------
+- The DELETE endpoint is protected by JWT authentication (protect
+  middleware) — unauthenticated users cannot call it
+- The adminOnly middleware ensures regular users (role: "user") get a
+  403 Forbidden response even if they have a valid token
+- The registration ID used in the URL is a MongoDB ObjectId — it is
+  not guessable, and it can only be obtained by first viewing the
+  registrants list (which is also admin-only)
 
-SUBMIT FLOW
-  Uses FormData (not JSON) because the request includes a file:
-  1. Appends all text fields to FormData with Object.entries(form).forEach().
-  2. Appends the image file if one was selected.
-  3. Sends POST /api/events with Content-Type: multipart/form-data.
-     (The api instance default is application/json, so this is overridden here.)
-  4. On success: toast + navigate back to /dashboard.
-
----------------------------------------------------
-3. EDITEVENT.JSX
----------------------------------------------------
-PURPOSE
-  Same layout as CreateEvent but pre-fills fields with the existing event's data.
-
-KEY DIFFERENCE — useEffect on mount
-  Reads the event id from useParams() (URL: /edit-event/:id).
-  Calls GET /api/events/:id to fetch the current data and populate the form.
-  
-  Date handling: MongoDB stores dates as ISO strings (e.g. "2026-05-01T00:00:00Z").
-  .slice(0, 10) trims it to "2026-05-01" which is the format <input type="date"> needs.
-
-  Existing image: if the event has an image, sets the preview to its full URL
-  (http://localhost:5000/<path>) so the admin can see the current banner.
-
-SUBMIT FLOW
-  Same as CreateEvent but calls PUT /api/events/:id. Only sends a new image
-  file if the admin picked one — otherwise the existing image stays unchanged
-  (handled by the backend's "update only what was sent" pattern).
-
-fetching state
-  Shows a simple "Loading event..." screen while the initial GET is in flight,
-  preventing the form from rendering with empty values.
-
----------------------------------------------------
-4. VIEWREGISTERED.JSX
----------------------------------------------------
-PURPOSE
-  Shows the admin a table of everyone who registered for a specific event.
-
-URL PARAMS — useSearchParams
-  Reads eventId and title from the URL query string:
-    /view-registered?eventId=abc123&title=Tech%20Summit
-
-DATA FETCHING
-  Calls GET /api/registrations/:eventId on mount.
-  The response contains: { event (title), total, registrants[] }.
-  Sets both eventTitle and registrants from the response.
-
-TABLE LAYOUT
-  A 4-column grid (CSS grid, not <table>) for clean alignment:
-    Name | Email | Phone | Registered (date)
-  
-  - Alternating row background (white / gray-50) for readability.
-  - Phone shows an em dash (—) if the field is empty.
-  - Registration date formatted as "May 1, 2026".
-  - A badge in the header shows the total count.
-
-EMPTY STATE
-  If no one has registered, shows a friendly icon and message.
-
----------------------------------------------------
-SHARED DESIGN PATTERNS
----------------------------------------------------
-  - All admin pages use the same warm gradient background.
-  - Back arrow links use Link (not navigate) for proper accessibility.
-  - All forms disable the submit button and show loading text during API calls.
-  - Errors are shown via react-hot-toast.
-  - All admin routes are protected by ProtectedRoute in App.jsx.
+====================================================

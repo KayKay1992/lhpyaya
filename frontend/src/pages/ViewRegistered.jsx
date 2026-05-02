@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../api";
 import toast from "react-hot-toast";
-import { ArrowLeft, Users, Mail, Phone, User } from "lucide-react";
+import { ArrowLeft, Users, Mail, Phone, User, Trash2 } from "lucide-react";
 
 const ViewRegistered = () => {
   const [registrants, setRegistrants] = useState([]);
   const [eventTitle, setEventTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const [searchParams] = useSearchParams();
 
   const eventId = searchParams.get("eventId");
@@ -26,6 +27,20 @@ const ViewRegistered = () => {
       .catch(() => toast.error("Failed to load registrants"))
       .finally(() => setLoading(false));
   }, [eventId]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Remove this registrant?")) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/registrations/${id}`);
+      setRegistrants((prev) => prev.filter((r) => r._id !== id));
+      toast.success("Registrant removed");
+    } catch {
+      toast.error("Failed to remove registrant");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-10">
@@ -67,7 +82,7 @@ const ViewRegistered = () => {
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             {/* Table Header */}
-            <div className="grid grid-cols-4 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="grid grid-cols-5 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span className="flex items-center gap-1.5">
                 <User size={12} /> Name
               </span>
@@ -78,12 +93,13 @@ const ViewRegistered = () => {
                 <Phone size={12} /> Phone
               </span>
               <span>Registered</span>
+              <span></span>
             </div>
             {/* Rows */}
             {registrants.map((r, i) => (
               <div
                 key={r._id}
-                className={`grid grid-cols-4 gap-4 px-6 py-4 text-sm text-gray-700 items-center border-b border-gray-100 last:border-0 ${
+                className={`grid grid-cols-5 gap-4 px-6 py-4 text-sm text-gray-700 items-center border-b border-gray-100 last:border-0 ${
                   i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                 }`}
               >
@@ -99,6 +115,16 @@ const ViewRegistered = () => {
                     year: "numeric",
                   })}
                 </span>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => handleDelete(r._id)}
+                    disabled={deletingId === r._id}
+                    className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                  >
+                    <Trash2 size={13} />
+                    {deletingId === r._id ? "Removing..." : "Remove"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

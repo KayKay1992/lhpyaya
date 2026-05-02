@@ -1,145 +1,117 @@
 ====================================================
-  FEATURES: Search, Attendance Tracking & Bug Fixes
+  FEATURE: Navbar Added to Admin Pages
+  (CreateEvent, EditEvent, ViewRegistered)
 ====================================================
 
 OVERVIEW
 --------
-Three things were implemented in this session:
+All three admin-only pages now have the same consistent sticky navbar
+that was already on AdminDashboard. This gives the admin a persistent
+top bar no matter which page they are on, showing the brand identity
+and quick-access controls at all times.
 
-  1. Admin can search for a registrant by name or email
-  2. Admin can mark/unmark a registrant as "attended"
-  3. Two bugs were fixed:
-       - CORS was blocking PATCH requests
-       - A regex escape in RegisterEvent.jsx was causing a Vite 500 error
+----------------------------------------------------
+WHAT THE NAVBAR SHOWS
+----------------------------------------------------
 
-====================================================
-FEATURE 1 — Search Registrants
-====================================================
+LEFT SIDE:
+  - RCCG logo (circular, 36x36)
+  - YaYa logo (circular, 36x36)
+  - "LHP-YAYA" brand text in bold
+  - An orange "Admin" badge to indicate the admin context
 
-WHERE: frontend/src/pages/ViewRegistered.jsx
+RIGHT SIDE:
+  - "Hi, <admin name>" — greeting pulled from the auth context
+  - "Dashboard" text button — navigates back to /dashboard
+  - "Sign Out" button (red, with LogOut icon) — calls logout() from
+    AuthContext then redirects to /login
 
-HOW IT WORKS:
-- Added a `search` state variable (empty string by default)
-- Added a search input box that appears above the table whenever there
-  are registrants to show
-- A `filtered` derived array is computed from the `registrants` state:
+The navbar is sticky (stays at the top while scrolling) and uses a
+frosted-glass style: white with 80% opacity + backdrop blur, so content
+scrolling behind it looks clean.
 
-    const filtered = registrants.filter(
-      (r) =>
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.email.toLowerCase().includes(search.toLowerCase()),
-    );
+----------------------------------------------------
+FILES CHANGED
+----------------------------------------------------
 
-- The table renders `filtered` instead of `registrants`, so the list
-  updates live as the admin types — no API call needed, it's purely
-  a client-side filter
-- If the search term has no matches, the table body shows:
-  "No results match your search."
-- The total count badge in the header still shows the full count
-  (not the filtered count), so the admin always sees how many total
-  registrations exist for the event
+All three files received the same set of changes:
 
-====================================================
-FEATURE 2 — Attendance Marking
-====================================================
+1. frontend/src/pages/CreateEvent.jsx
+2. frontend/src/pages/EditEvent.jsx
+3. frontend/src/pages/ViewRegistered.jsx
 
-BACKEND CHANGES:
+----------------------------------------------------
+CHANGES MADE TO EACH FILE
+----------------------------------------------------
 
-1. models/Registration.js
-   - Added a new field to the schema:
-       attended: { type: Boolean, default: false }
-   - Every new registration starts as not attended
-   - Existing registrations in MongoDB will automatically return
-     `attended: false` when read (Mongoose default applies to reads too)
+A. New imports added at the top of each file:
+   - LogOut icon from lucide-react (for the Sign Out button)
+   - useAuth from ../context/AuthContext (to get user + logout)
+   - rccgLogo from ../assets/download (1).jpg
+   - yayaLogo from ../assets/yaya.png
+   - useNavigate from react-router-dom (for programmatic navigation)
 
-2. controllers/registrationController.js — toggleAttendance()
-   - Finds the registration by :registrationId from the URL
-   - Flips the boolean:  registration.attended = !registration.attended
-   - Saves the document
-   - Returns: { attended: true/false }  so the frontend knows the new state
-   - Returns 404 if the ID doesn't exist
-   - Protected: only admins can call this
+B. useAuth destructured inside the component:
+   - const { user, logout } = useAuth();
+   - const navigate = useNavigate();
+   These give the navbar access to the logged-in user's name and the
+   ability to navigate programmatically on sign-out.
 
-3. routes/registrationRoutes.js
-   - Added:
-       PATCH /api/registrations/:registrationId/attend
-   - Protected with `protect` (JWT check) and `adminOnly` (role check)
-   - Uses PATCH because we're partially updating one field (not replacing
-     the whole document like PUT)
+C. Page wrapper changed:
+   Before:
+     <div className="min-h-screen ... px-4 py-10">
+       <div className="max-w-xl mx-auto">
+         ...content...
+       </div>
+     </div>
 
-FRONTEND CHANGES (ViewRegistered.jsx):
+   After:
+     <div className="min-h-screen ...">
+       <header>  ← navbar goes here </header>
+       <div className="px-4 py-10">
+         <div className="max-w-xl mx-auto">
+           ...content...
+         </div>
+       </div>
+     </div>
 
-- Added `togglingId` state — holds the _id of the registration currently
-  being toggled, used to show a loading state and prevent double-clicks
-- Added handleToggleAttend(id) function:
-    * Calls  PATCH /api/registrations/:id/attend
-    * On success: updates only that one row in state using .map()
-      (no full re-fetch needed)
-    * Shows toast: "Marked as attended" or "Marked as not attended"
-      depending on the new value returned from the server
-- Added an "Attended" column to the table (grid expanded from 5 → 6 cols)
-- Each row has a toggle button:
-    * Not attended  →  grey circle icon + "Mark" label
-    * Attended      →  green filled circle icon + "Attended" label
-  The button is styled green when attended, grey when not, so the admin
-  can see attendance at a glance without pressing anything
+   The padding was moved from the outer wrapper into an inner div so
+   the navbar can span the full width without inheriting the content
+   padding. An extra closing </div> was added at the bottom to close
+   the new inner wrapper correctly.
 
-====================================================
-BUG FIX 1 — CORS Blocking PATCH Requests
-====================================================
+D. Navbar JSX added inside the wrapper, before the content:
+   <header className="sticky top-0 z-50 bg-white/80 backdrop-blur
+     border-b border-orange-100 px-6 py-3 flex items-center justify-between">
 
-FILE: backend/server.js
+   Left:  logos + brand name + Admin badge
+   Right: greeting + Dashboard button + Sign Out button
 
-PROBLEM:
-  The CORS middleware only listed: ["GET", "POST", "PUT", "DELETE"]
-  When the frontend sent a PATCH request, the browser first sends an
-  OPTIONS preflight. The server responded that PATCH is not in the
-  allowed methods, so the browser blocked the actual request with:
-  "Method PATCH is not allowed by Access-Control-Allow-Methods"
+----------------------------------------------------
+WHY THE SAME NAVBAR ACROSS ALL PAGES?
+----------------------------------------------------
 
-FIX:
-  Added "PATCH" to the methods array:
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+Consistency — the admin should always know where they are and always
+have the same controls available. Without the navbar, pages like
+CreateEvent and EditEvent had no brand identity and no Sign Out option
+unless the admin navigated back to the dashboard first.
 
-  The backend must be restarted for this change to take effect.
+The "Back to Dashboard" link at the top of each page content still
+exists as well, so the admin has two ways to go back: the content-area
+back link (prominent, contextual) and the navbar Dashboard button
+(persistent, always visible).
 
-====================================================
-BUG FIX 2 — Vite 500 on RegisterEvent.jsx
-====================================================
+----------------------------------------------------
+HOW THE SIGN OUT WORKS
+----------------------------------------------------
 
-FILE: frontend/src/pages/RegisterEvent.jsx
-
-PROBLEM:
-  The phone validation regex contained an escaped hyphen  \-  inside
-  a character class:
-    /[\s\-().]/g
-  This is technically valid JS, but the backslash before the hyphen can
-  confuse some bundler/transform pipelines (Vite threw a 500 error when
-  hot-reloading the file).
-
-FIX:
-  Moved the hyphen to the end of the character class where it is
-  unambiguous and needs no escaping:
-    /[\s().-]/g
-  Same behaviour, no parse ambiguity, Vite no longer errors.
-
-====================================================
-HOW THE FULL ATTENDANCE FLOW WORKS
-====================================================
-
-1. Admin opens Registrants page for an event
-2. Table loads with all registrants — "Attended" column shows grey
-   "Mark" buttons for everyone
-3. Admin optionally types a name or email in the search box to find
-   a specific person
-4. Admin clicks "Mark" on a row
-5. Frontend sends:  PATCH /api/registrations/<id>/attend
-   with the JWT token in the Authorization header
-6. CORS preflight now succeeds because PATCH is in the allowed methods
-7. Backend verifies JWT, checks admin role, flips the attended boolean,
-   saves, and returns the new value
-8. Frontend updates just that row in state — button turns green and
-   shows "Attended"
-9. Admin can click "Attended" again to un-mark the person (toggle)
+1. Admin clicks "Sign Out" in the navbar
+2. logout() is called from AuthContext:
+   - Removes the JWT token from localStorage
+   - Sets the user state to null
+3. navigate("/login") redirects to the login page
+4. Any subsequent API calls will have no token → 401 Unauthorized
+5. The ProtectedRoute on /dashboard, /create-event, etc. will redirect
+   to /login if the user tries to go back
 
 ====================================================

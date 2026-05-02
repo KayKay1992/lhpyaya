@@ -9,6 +9,8 @@ import {
   LogIn,
   LogOut,
   LayoutDashboard,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import rccgLogo from "../assets/download (1).jpg";
@@ -19,6 +21,7 @@ const RegisterEvent = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [eventImage, setEventImage] = useState(null);
+  const [eventDetails, setEventDetails] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -33,6 +36,11 @@ const RegisterEvent = () => {
         .then((res) => {
           if (res.data.image)
             setEventImage(`http://localhost:5000/${res.data.image}`);
+          setEventDetails({
+            date: res.data.date,
+            time: res.data.time,
+            location: res.data.location,
+          });
         })
         .catch(() => {});
     }
@@ -93,6 +101,30 @@ const RegisterEvent = () => {
             </span>
             . See you there!
           </p>
+
+          {eventDetails && (
+            <div className="bg-orange-50 border border-orange-100 rounded-2xl px-5 py-4 mb-6 text-left space-y-2.5">
+              <div className="flex items-center gap-2.5 text-sm text-gray-700">
+                <CalendarDays size={15} className="text-[#ff9324] shrink-0" />
+                <span>
+                  {new Date(eventDetails.date).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-gray-700">
+                <Clock size={15} className="text-[#ff9324] shrink-0" />
+                <span>{eventDetails.time}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-gray-700">
+                <MapPin size={15} className="text-[#ff9324] shrink-0" />
+                <span>{eventDetails.location}</span>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => navigate("/")}
             className="w-full bg-[#ff9324] hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-md shadow-orange-200"

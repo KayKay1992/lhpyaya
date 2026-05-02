@@ -1,120 +1,106 @@
 ====================================================
-  FEATURE: Responsive Table Layout for ViewRegistered
-  (Proper column spacing + phone number on all screens)
+  FEATURE: Event Details on Registration Success Screen
 ====================================================
 
 OVERVIEW
 --------
-The registrants table in ViewRegistered.jsx was cramped on small screens
-because all columns shared equal width and the phone number was getting
-squeezed. The fix involved:
-
-  1. Switching from equal-column grid to explicitly-sized columns
-  2. Creating two separate table layouts — one for desktop, one for mobile
-  3. Keeping phone number visible on ALL screen sizes
+After a user successfully registers for an event, the success screen
+now shows the event's date, time, and location so they immediately know
+when and where to show up — without having to go back to the landing page
+to look it up.
 
 ----------------------------------------------------
-THE PROBLEM
+WHAT WAS ADDED
 ----------------------------------------------------
 
-Before the fix, the table used:
-  grid-cols-5  or  grid-cols-6
+FILE: frontend/src/pages/RegisterEvent.jsx
 
-This gives every column the exact same width. With 5-6 columns on a
-narrow screen, columns like Phone (which contains longer text like
-"+234 801 234 5678") had no room and the text overflowed or was cut off
-awkwardly. The action buttons were also cramped.
+1. Two new icon imports from lucide-react:
+   - Clock   (for the time row)
+   - MapPin  (for the location row)
+   These join the existing CalendarDays icon used for the date row.
 
-----------------------------------------------------
-THE SOLUTION — Explicit Column Widths
-----------------------------------------------------
+2. New state variable: eventDetails
+   - const [eventDetails, setEventDetails] = useState(null);
+   - Starts as null (nothing to show yet)
+   - Gets populated when the event data is fetched on page load
 
-Instead of equal columns, the table now uses CSS grid template columns
-with explicit sizing:
+3. Extended the existing useEffect fetch:
+   The page already fetched GET /api/events/:eventId on mount to get
+   the event image for display above the form. That same API response
+   also contains date, time, and location. These are now stored:
 
-DESKTOP (sm and above):
-  grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px]
+     setEventDetails({
+       date: res.data.date,
+       time: res.data.time,
+       location: res.data.location,
+     });
 
-  - Name        → 1fr   (flexible)
-  - Email       → 1.5fr (wider, emails are long)
-  - Phone       → 1fr   (flexible)
-  - Registered  → 1fr   (flexible)
-  - Attended    → 90px  (fixed, just enough for the button)
-  - Actions     → 80px  (fixed, just enough for Remove button)
+   No extra API call is made — the same response that was already being
+   used for the image is also used for the event details. This is
+   efficient and avoids unnecessary network requests.
 
-MOBILE (below sm):
-  grid-cols-[1fr_1fr_1fr_72px_60px]
+4. Info card on the success screen:
+   After the "You're registered!" message, a new orange info card
+   appears (only if eventDetails is not null):
 
-  - Name        → 1fr
-  - Email       → 1fr
-  - Phone       → 1fr
-  - Attended    → 72px  (fixed)
-  - Actions     → 60px  (fixed, icon-only trash button)
+     <div className="bg-orange-50 border border-orange-100 rounded-2xl ...">
+       <CalendarDays /> Full date (e.g. "Sunday, May 4, 2026")
+       <Clock />       Time (e.g. "10:00 AM")
+       <MapPin />      Location (e.g. "RCCG Parish Hall")
+     </div>
 
-The "Registered" date column is hidden on mobile (hidden sm:block) to
-save horizontal space — it is the least critical piece of information
-when viewing on a phone.
-
-----------------------------------------------------
-TWO SEPARATE ROW LAYOUTS
-----------------------------------------------------
-
-Each data row now renders TWO divs — one visible on desktop, one on
-mobile — controlled by Tailwind's responsive display utilities:
-
-  Desktop row:  className="hidden sm:grid ..."
-  Mobile row:   className="grid sm:hidden ..."
-
-This approach is cleaner than trying to hide/show individual cells
-inside a single row, because each layout can have its own column
-template independently.
-
-DESKTOP ROW shows:
-  Name | Email | Phone | Registered Date | Attended button | Remove button
-  (full text on buttons: "Attended"/"Mark", "Remove"/etc.)
-
-MOBILE ROW shows:
-  Name | Email | Phone | Attended button | Remove button (icon only)
-  (button labels shortened: "Yes"/"Mark" for attended; trash icon only
-   for remove to save space)
+   The date is formatted using toLocaleDateString with options:
+     weekday: "long", year: "numeric", month: "long", day: "numeric"
+   This gives a human-readable format instead of a raw ISO date string.
 
 ----------------------------------------------------
-PHONE NUMBER — ALWAYS VISIBLE
+HOW THE FULL FLOW WORKS
 ----------------------------------------------------
 
-In an earlier iteration, the phone number was removed from the mobile
-layout to save space. The user requested it be kept. It was added back
-to both the mobile header and mobile row:
-
-  Header:  <Phone size={11} /> Phone
-  Row:     {r.phone || <span className="text-gray-300">—</span>}
-
-The phone cell uses `truncate` so if a number is very long it clips
-with an ellipsis instead of breaking the layout.
-
-----------------------------------------------------
-SUMMARY OF ALL COLUMN CHANGES
-----------------------------------------------------
-
-Screen    | Columns shown
-----------|------------------------------------------------------
-Desktop   | Name, Email, Phone, Registered, Attended, Actions
-Mobile    | Name, Email, Phone, Attended, Actions (icon only)
+1. User lands on /register?eventId=...&title=...
+2. useEffect fires on mount → fetches GET /api/events/:eventId
+3. Response stores:
+   - event.image  → shown as the flyer above the form
+   - event.date, event.time, event.location → saved in eventDetails state
+4. User fills in Name, Email, Phone and submits
+5. POST /api/registrations/:eventId succeeds
+6. success state is set to true → success screen renders
+7. The success screen shows:
+   - Green checkmark + "You're registered!" heading
+   - Confirmation message with the event name
+   - Orange info card with date, time, location
+   - "Back to Events" button
 
 ----------------------------------------------------
-WHY THIS APPROACH IS BETTER
+GRACEFUL DEGRADATION
 ----------------------------------------------------
 
-1. Explicit pixel/fraction widths prevent columns from competing for
-   space — each column gets exactly what it needs
+The info card is wrapped in a conditional:
+  {eventDetails && ( ... )}
 
-2. Separate mobile/desktop rows means no hacks like negative margins
-   or overflow-x scroll — the layout simply reflows cleanly
+This means:
+- If the initial event fetch failed (network error, invalid ID, etc.),
+  eventDetails remains null and the card simply doesn't appear
+- The success confirmation still shows correctly — the user still
+  knows they registered
+- No error is shown for the missing details, keeping the screen clean
 
-3. Phone number is preserved on all screens as requested, using
-   `truncate` to handle long numbers gracefully
+----------------------------------------------------
+WHY THIS IS USEFUL
+----------------------------------------------------
 
-4. Action buttons have fixed pixel widths so they never stretch or
-   compress regardless of the data in other columns
+Before this change, a user who registered would see:
+  "You have successfully registered for [Event Name]. See you there!"
+
+They would then need to go back to the landing page, find the event
+card, and read the details again to know when to show up.
+
+Now the success screen answers the most important questions immediately:
+  "When is it?"    → Full date shown
+  "What time?"     → Time shown
+  "Where is it?"   → Location shown
+
+This reduces confusion and eliminates a step for the user.
 
 ====================================================

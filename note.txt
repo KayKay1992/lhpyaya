@@ -1,75 +1,80 @@
 ===================================================
-FRONTEND — AUTHCONTEXT SETUP
+FRONTEND — LOGIN & SIGNUP PAGES
 ===================================================
 
 FILES CHANGED
 -------------
-  src/context/AuthContext.jsx    — created (auth state + logic)
-  src/main.jsx                   — updated (wrapped app in AuthProvider)
-  src/components/auth/ProtectedRoute.jsx — updated (reads real auth state)
+  src/pages/LoginPage.jsx   — filled with form UI + login logic
+  src/pages/SignupPage.jsx  — filled with form UI + signup logic
+
+Both pages follow the same pattern: controlled form state → submit → API call →
+call login() from AuthContext → redirect.
 
 ---------------------------------------------------
-1. AuthContext.jsx — How it works
+1. LOGINPAGE.JSX
 ---------------------------------------------------
-React Context lets you share state across the whole app without passing props
-through every component. AuthContext shares the logged-in user's info, loading
-state, and login/logout functions.
-
 STATE
-  user    — holds the logged-in user object (name, email, role) or null if not logged in.
-  loading — true while the app is checking whether the user is already logged in
-            (prevents the app from flashing the login page on refresh).
+  form    — object holding { email, password }, updated on every keystroke via handleChange.
+  loading — boolean, true while the API call is in flight (disables the button).
 
-useEffect ON MOUNT (auto-login on refresh)
-  When the app first loads, it checks localStorage for a saved JWT token.
-  - If no token exists: sets loading to false and does nothing.
-  - If a token exists: calls GET /api/auth/me using the api instance (which
-    automatically attaches the token in the Authorization header).
-    - On success: sets the user state with the returned profile.
-    - On failure (expired/invalid token): removes the bad token from
-      localStorage and sets user to null.
-  - Either way: sets loading to false when done.
-  This means the user stays logged in across page refreshes.
+FLOW
+  1. User fills in email and password.
+  2. On submit, e.preventDefault() stops the page from refreshing.
+  3. Calls POST /api/auth/login with the form data via the api instance.
+  4. On success:
+       - Calls login(token, user) from AuthContext, which saves the token to
+         localStorage and sets the user state globally.
+       - Shows a success toast: "Welcome back, <name>!"
+       - Redirects the user. If they were redirected to /login from a protected
+         route (e.g. they tried to go to /dashboard while logged out), they are
+         sent back to that original page using location.state?.from?.pathname.
+         Otherwise they go to /dashboard.
+  5. On error: shows the server's error message via toast (e.g. "Invalid email or password").
+  6. loading is always reset to false in the finally block.
 
-login(token, userData)
-  Called after a successful login or signup. Saves the JWT token to localStorage
-  and sets the user state — triggering a re-render across the whole app.
-
-logout()
-  Removes the token from localStorage and sets user to null — instantly
-  making the app treat the user as logged out.
-
-useAuth() — custom hook
-  Exported as a shortcut so any component can just write:
-    const { user, loading, login, logout } = useAuth();
-  instead of:
-    const { user, loading, login, logout } = useContext(AuthContext);
+UI
+  - Clean centered card with email + password inputs.
+  - Submit button shows "Signing in..." while loading and is disabled to prevent double-submit.
+  - Link to /signup at the bottom.
+  - Focus ring uses the brand color (#ff9324).
 
 ---------------------------------------------------
-2. main.jsx — AuthProvider wrapping
+2. SIGNUPPAGE.JSX
 ---------------------------------------------------
-AuthProvider is wrapped around the entire App inside BrowserRouter:
+STATE
+  form    — object holding { name, email, password, confirmPassword }.
+  loading — boolean for the API call.
 
-  <BrowserRouter>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </BrowserRouter>
+FLOW
+  1. Client-side password match check before sending the request:
+       if (form.password !== form.confirmPassword) → toast error, return early.
+     This avoids an unnecessary API call for a simple mismatch.
+  2. Calls POST /api/auth/register with { name, email, password }.
+     (confirmPassword is NOT sent to the backend — it's only for client validation.)
+  3. On success:
+       - Calls login(token, user) — same as login page, immediately logs the user in.
+       - Shows a success toast: "Account created! Welcome, <name>!"
+       - Redirects to /dashboard.
+  4. On error: shows server error toast (e.g. "User already exists with this email").
 
-This makes the auth state (user, loading, login, logout) available to every
-component in the app, including all pages and the ProtectedRoute.
+UI
+  - Same card layout as LoginPage for visual consistency.
+  - Four fields: Full Name, Email, Password, Confirm Password.
+  - Submit button shows "Creating account..." while loading.
+  - Link to /login at the bottom.
 
 ---------------------------------------------------
-3. ProtectedRoute.jsx — Updated
+SHARED PATTERNS
 ---------------------------------------------------
-Previously used hardcoded placeholders (isAuthenticated = false).
-Now it reads real state from AuthContext via the useAuth() hook:
+handleChange
+  Uses the spread pattern to update only the changed field:
+    setForm({ ...form, [e.target.name]: e.target.value })
+  The input's name attribute must match the key in the form state object.
 
-  const { user, loading } = useAuth();
+Error handling
+  err.response?.data?.message uses optional chaining to safely read the
+  server's error message. Falls back to a generic message if unavailable.
 
-  - While loading is true: shows a loading message (prevents redirect flash).
-  - If user is null (not logged in): redirects to /login, preserving the
-    page the user was trying to reach in location.state.from.
-  - If user exists: renders the protected children components.
-
-This is the gatekeeper for all admin routes (/dashboard, /create-event, etc.).
+toast (react-hot-toast)
+  toast.success() and toast.error() show non-blocking notification popups.
+  The Toaster component in main.jsx renders them in the bottom-right corner.

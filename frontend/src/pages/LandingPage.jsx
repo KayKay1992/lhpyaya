@@ -41,9 +41,19 @@ const LandingPage = () => {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-orange-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <img src={rccgLogo} alt="RCCG Logo" className="w-10 h-10 rounded-full object-cover" />
-          <img src={yayaLogo} alt="YaYa Logo" className="w-10 h-10 rounded-full object-cover" />
-          <span className="text-lg font-bold text-gray-900 tracking-tight">LHP-YAYA</span>
+          <img
+            src={rccgLogo}
+            alt="RCCG Logo"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <img
+            src={yayaLogo}
+            alt="YaYa Logo"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <span className="text-lg font-bold text-gray-900 tracking-tight">
+            LHP-YAYA
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {user ? (
@@ -57,10 +67,15 @@ const LandingPage = () => {
                 </button>
               )}
               {user.role !== "admin" && (
-                <span className="text-sm text-gray-500 hidden sm:block">Hello, {user.name}</span>
+                <span className="text-sm text-gray-500 hidden sm:block">
+                  Hello, {user.name}
+                </span>
               )}
               <button
-                onClick={() => { logout(); navigate('/'); }}
+                onClick={() => {
+                  logout();
+                  navigate("/");
+                }}
                 className="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition"
               >
                 <LogOut size={15} /> Sign Out

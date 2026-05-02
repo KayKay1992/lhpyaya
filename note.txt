@@ -1,74 +1,89 @@
 ===================================================
-MONGOOSE MODELS — EXPLANATION
+CONTROLLERS — EXPLANATION
 ===================================================
 
-OVERVIEW
---------
-Three Mongoose models were created to represent the core data of the event registration app:
-User, Event, and Registration. Each model defines a schema — a blueprint that tells MongoDB
-what fields a document must/can have and what type and rules apply to each field.
+Controllers contain the actual business logic for each API endpoint. Each function
+receives the request (req) and response (res) objects from Express, does its work
+(validation, database query, etc.), and sends back a JSON response.
 
 ---------------------------------------------------
-1. USER MODEL (models/User.js)
+1. AUTH CONTROLLER (controllers/authController.js)
 ---------------------------------------------------
-Purpose: Stores admin and regular user accounts.
+Three functions handle user authentication:
 
-Fields:
-  - name      : String, required, trimmed of whitespace.
-  - email     : String, required, must be unique across all users, auto-lowercased and trimmed.
-                The unique constraint prevents two accounts sharing the same email.
-  - password  : String, required. Will store a bcrypt hash (not plain text) when auth is implemented.
-  - role      : String, restricted to either "admin" or "user" via the enum option.
-                Defaults to "user" so new sign-ups are regular users unless explicitly set to admin.
-  - timestamps: Mongoose automatically adds createdAt and updatedAt fields.
+  registerUser — POST /api/auth/register
+    - Validates that name, email, and password are provided.
+    - Checks if a user with that email already exists (returns 400 if so).
+    - Hashes the password using bcrypt (genSalt + hash) before saving — plain text
+      passwords are never stored.
+    - Creates the user in the database with the hashed password and role.
+    - Signs a JWT token containing the user's id and role, with a 7-day expiry.
+    - Returns the token and basic user info (no password).
 
-Key design decision: The role field is what separates admins from regular users.
-Only admins will be allowed to create, edit, and delete events.
+  loginUser — POST /api/auth/login
+    - Validates email and password are provided.
+    - Finds the user by email. Returns 401 if not found (same message as wrong
+      password — avoids leaking whether an email exists).
+    - Uses bcrypt.compare() to check the submitted password against the hash.
+    - Signs and returns a JWT token on success.
 
----------------------------------------------------
-2. EVENT MODEL (models/Event.js)
----------------------------------------------------
-Purpose: Stores events that admins create, which users will see on the landing page.
+  getMe — GET /api/auth/me
+    - Protected route: relies on authMiddleware to attach req.user.
+    - Fetches the logged-in user's profile from the database using req.user.id.
+    - Uses .select('-password') to exclude the password field from the response.
 
-Fields:
-  - title       : String, required, trimmed.
-  - description : String, required. Provides details about the event.
-  - date        : Date type, required. Stored as a proper Date object so it can be sorted/filtered.
-  - time        : String, required. Stored as a string (e.g. "10:00 AM") for display flexibility.
-  - location    : String, required, trimmed.
-  - image       : String, optional (defaults to empty string). Stores the file path/URL of an
-                  uploaded event banner image handled by multer.
-  - createdBy   : References the User model using mongoose.Schema.Types.ObjectId with ref: "User".
-                  This creates a relationship — you can use .populate("createdBy") to get the
-                  full admin user object when querying events.
-  - timestamps  : Auto-added createdAt and updatedAt fields.
-
-Key design decision: The createdBy reference links each event to the admin who created it,
-which is useful for authorization checks (only the creator or any admin can edit/delete it).
+JWT_SECRET is read from process.env so it is never hardcoded in source code.
 
 ---------------------------------------------------
-3. REGISTRATION MODEL (models/Registration.js)
+2. EVENT CONTROLLER (controllers/eventController.js)
 ---------------------------------------------------
-Purpose: Stores each registration submission from a user for a specific event.
+Five functions cover the full CRUD lifecycle for events:
 
-Fields:
-  - event  : References the Event model via ObjectId with ref: "Event". Required.
-             Links the registration to the specific event they signed up for.
-  - name   : String, required, trimmed. The registrant's full name.
-  - email  : String, required, auto-lowercased and trimmed. The registrant's email.
-  - phone  : String, optional (defaults to empty string). The registrant's phone number.
-  - timestamps: Auto-added createdAt and updatedAt fields.
+  getEvents — GET /api/events  (Public)
+    - Fetches all events from the database, sorted by date ascending (soonest first).
 
-Key design decision: No user account is required to register. Anyone can submit their
-name, email, and phone to register for an event. The event field ties each registration
-to a specific event so admins can query and view all registrants per event.
+  getEventById — GET /api/events/:id  (Public)
+    - Fetches a single event by its MongoDB _id from the URL param.
+    - Returns 404 if no event is found with that id.
+
+  createEvent — POST /api/events  (Admin only)
+    - Validates all required fields (title, description, date, time, location).
+    - If a file was uploaded (via multer), stores req.file.path as the image field.
+    - Sets createdBy to req.user.id (the logged-in admin's id, attached by authMiddleware).
+
+  updateEvent — PUT /api/events/:id  (Admin only)
+    - Finds the event by id, returns 404 if missing.
+    - Uses the "update only what was sent" pattern: falls back to the existing value
+      if a field is not included in the request body (e.g. event.title = title || event.title).
+    - Saves and returns the updated document.
+
+  deleteEvent — DELETE /api/events/:id  (Admin only)
+    - Finds the event by id, returns 404 if missing.
+    - Calls .deleteOne() on the document to remove it from the database.
 
 ---------------------------------------------------
-HOW MODELS ARE EXPORTED
+3. REGISTRATION CONTROLLER (controllers/registrationController.js)
 ---------------------------------------------------
-Each file ends with:
-  module.exports = mongoose.model('ModelName', schema);
+Two functions handle event registrations:
 
-This creates the MongoDB collection automatically (Mongoose pluralizes the model name,
-e.g. "User" becomes the "users" collection) and exports it so controllers can import
-and use it to query, create, update, or delete documents.
+  registerForEvent — POST /api/registrations/:eventId  (Public)
+    - Validates name and email are provided.
+    - Checks the event exists (returns 404 if not).
+    - Checks for a duplicate registration: if the same email is already registered
+      for that event, returns 400 — prevents double sign-ups.
+    - Creates and saves the registration document linked to the event via ObjectId.
+
+  getRegistrantsByEvent — GET /api/registrations/:eventId  (Admin only)
+    - Checks the event exists.
+    - Fetches all registrations for that event, sorted newest first.
+    - Returns the event title, total registrant count, and the full list — giving
+      the admin a clean summary view.
+
+---------------------------------------------------
+ERROR HANDLING PATTERN
+---------------------------------------------------
+Every controller function wraps database calls in try/catch.
+- Validation errors return 400 (bad request).
+- Not-found cases return 404.
+- Auth failures return 401.
+- Unexpected server errors return 500 with the error message for debugging.

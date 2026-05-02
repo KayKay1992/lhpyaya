@@ -1,18 +1,20 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const connectDB = require('./config/db');
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const connectDB = require("./config/db");
 
 const app = express();
 
 // middleware to handle CORS
-app.use(cors({
+app.use(
+  cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-}));
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 // connect to database
 connectDB();
@@ -21,10 +23,15 @@ connectDB();
 app.use(express.json());
 
 //static folder for uploaded images
-app.use('/backend/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/backend/uploads", express.static(path.join(__dirname, "uploads")));
+
+// routes
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/events", require("./routes/eventRoutes"));
+app.use("/api/registrations", require("./routes/registrationRoutes"));
 
 //start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

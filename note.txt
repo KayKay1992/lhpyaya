@@ -1,0 +1,53 @@
+===================================================
+BACKEND SETUP & MONGODB CONNECTION — EXPLANATION
+===================================================
+
+PACKAGES INSTALLED
+------------------
+The following npm packages were installed for the backend:
+
+- express        : Web framework used to create the HTTP server and handle routes.
+- cors           : Middleware that allows the frontend (running on a different port) to make requests to the backend.
+- dotenv         : Loads environment variables from the .env file into process.env.
+- mongoose       : ODM (Object Data Modeling) library for MongoDB — used to connect and interact with the database.
+- multer          : Middleware for handling file/image uploads.
+- bcryptjs       : Used for hashing passwords securely.
+- jsonwebtoken   : Used for creating and verifying JWT tokens (for authentication).
+- nodemon        : Dev tool that automatically restarts the server when file changes are detected.
+
+FILE STRUCTURE
+--------------
+backend/
+  server.js         — Entry point of the backend application.
+  .env              — Stores sensitive config values (MongoDB URI, PORT).
+  config/
+    db.js           — Contains the MongoDB connection logic.
+  middleware/       — Folder reserved for custom middleware (e.g., auth checks).
+  uploads/          — Folder where uploaded images/files are stored.
+
+HOW THE MONGODB CONNECTION WORKS (config/db.js)
+------------------------------------------------
+A function called `connectDB` was created using async/await.
+It calls `mongoose.connect()` with the MongoDB URI read from the environment variable `process.env.MONGO_URI`.
+- If the connection succeeds, it logs "MongoDB connected".
+- If it fails, it logs the error and calls `process.exit(1)` to stop the server immediately rather than running without a database.
+The function is exported so it can be called from server.js.
+
+HOW THE SERVER IS SET UP (server.js)
+--------------------------------------
+1. `dotenv.config()` is called at the very top so all .env variables are available throughout the app.
+2. An Express app is created.
+3. CORS middleware is configured to allow all origins ("*") and the common HTTP methods (GET, POST, PUT, DELETE), so the React frontend can communicate with the backend.
+4. `connectDB()` is called to establish the MongoDB connection when the server starts.
+5. `express.json()` middleware is added so the server can parse incoming JSON request bodies.
+6. A static file route is set up at `/backend/uploads` pointing to the local `uploads/` folder, so uploaded images can be accessed via URL.
+7. The server listens on the port defined in .env (PORT=5000). If not set, it defaults to 5000.
+
+ENVIRONMENT VARIABLES (.env)
+-----------------------------
+MONGO_URI  — The MongoDB Atlas connection string (kept secret, never committed to Git).
+PORT       — The port the Express server listens on (5000).
+
+DEV SCRIPT
+----------
+Running `npm run dev` starts the server with nodemon, which watches for file changes and auto-restarts — useful during development.

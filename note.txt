@@ -1,117 +1,120 @@
 ====================================================
-  FEATURE: Navbar Added to Admin Pages
-  (CreateEvent, EditEvent, ViewRegistered)
+  FEATURE: Responsive Table Layout for ViewRegistered
+  (Proper column spacing + phone number on all screens)
 ====================================================
 
 OVERVIEW
 --------
-All three admin-only pages now have the same consistent sticky navbar
-that was already on AdminDashboard. This gives the admin a persistent
-top bar no matter which page they are on, showing the brand identity
-and quick-access controls at all times.
+The registrants table in ViewRegistered.jsx was cramped on small screens
+because all columns shared equal width and the phone number was getting
+squeezed. The fix involved:
+
+  1. Switching from equal-column grid to explicitly-sized columns
+  2. Creating two separate table layouts — one for desktop, one for mobile
+  3. Keeping phone number visible on ALL screen sizes
 
 ----------------------------------------------------
-WHAT THE NAVBAR SHOWS
+THE PROBLEM
 ----------------------------------------------------
 
-LEFT SIDE:
-  - RCCG logo (circular, 36x36)
-  - YaYa logo (circular, 36x36)
-  - "LHP-YAYA" brand text in bold
-  - An orange "Admin" badge to indicate the admin context
+Before the fix, the table used:
+  grid-cols-5  or  grid-cols-6
 
-RIGHT SIDE:
-  - "Hi, <admin name>" — greeting pulled from the auth context
-  - "Dashboard" text button — navigates back to /dashboard
-  - "Sign Out" button (red, with LogOut icon) — calls logout() from
-    AuthContext then redirects to /login
-
-The navbar is sticky (stays at the top while scrolling) and uses a
-frosted-glass style: white with 80% opacity + backdrop blur, so content
-scrolling behind it looks clean.
+This gives every column the exact same width. With 5-6 columns on a
+narrow screen, columns like Phone (which contains longer text like
+"+234 801 234 5678") had no room and the text overflowed or was cut off
+awkwardly. The action buttons were also cramped.
 
 ----------------------------------------------------
-FILES CHANGED
+THE SOLUTION — Explicit Column Widths
 ----------------------------------------------------
 
-All three files received the same set of changes:
+Instead of equal columns, the table now uses CSS grid template columns
+with explicit sizing:
 
-1. frontend/src/pages/CreateEvent.jsx
-2. frontend/src/pages/EditEvent.jsx
-3. frontend/src/pages/ViewRegistered.jsx
+DESKTOP (sm and above):
+  grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px]
 
-----------------------------------------------------
-CHANGES MADE TO EACH FILE
-----------------------------------------------------
+  - Name        → 1fr   (flexible)
+  - Email       → 1.5fr (wider, emails are long)
+  - Phone       → 1fr   (flexible)
+  - Registered  → 1fr   (flexible)
+  - Attended    → 90px  (fixed, just enough for the button)
+  - Actions     → 80px  (fixed, just enough for Remove button)
 
-A. New imports added at the top of each file:
-   - LogOut icon from lucide-react (for the Sign Out button)
-   - useAuth from ../context/AuthContext (to get user + logout)
-   - rccgLogo from ../assets/download (1).jpg
-   - yayaLogo from ../assets/yaya.png
-   - useNavigate from react-router-dom (for programmatic navigation)
+MOBILE (below sm):
+  grid-cols-[1fr_1fr_1fr_72px_60px]
 
-B. useAuth destructured inside the component:
-   - const { user, logout } = useAuth();
-   - const navigate = useNavigate();
-   These give the navbar access to the logged-in user's name and the
-   ability to navigate programmatically on sign-out.
+  - Name        → 1fr
+  - Email       → 1fr
+  - Phone       → 1fr
+  - Attended    → 72px  (fixed)
+  - Actions     → 60px  (fixed, icon-only trash button)
 
-C. Page wrapper changed:
-   Before:
-     <div className="min-h-screen ... px-4 py-10">
-       <div className="max-w-xl mx-auto">
-         ...content...
-       </div>
-     </div>
-
-   After:
-     <div className="min-h-screen ...">
-       <header>  ← navbar goes here </header>
-       <div className="px-4 py-10">
-         <div className="max-w-xl mx-auto">
-           ...content...
-         </div>
-       </div>
-     </div>
-
-   The padding was moved from the outer wrapper into an inner div so
-   the navbar can span the full width without inheriting the content
-   padding. An extra closing </div> was added at the bottom to close
-   the new inner wrapper correctly.
-
-D. Navbar JSX added inside the wrapper, before the content:
-   <header className="sticky top-0 z-50 bg-white/80 backdrop-blur
-     border-b border-orange-100 px-6 py-3 flex items-center justify-between">
-
-   Left:  logos + brand name + Admin badge
-   Right: greeting + Dashboard button + Sign Out button
+The "Registered" date column is hidden on mobile (hidden sm:block) to
+save horizontal space — it is the least critical piece of information
+when viewing on a phone.
 
 ----------------------------------------------------
-WHY THE SAME NAVBAR ACROSS ALL PAGES?
+TWO SEPARATE ROW LAYOUTS
 ----------------------------------------------------
 
-Consistency — the admin should always know where they are and always
-have the same controls available. Without the navbar, pages like
-CreateEvent and EditEvent had no brand identity and no Sign Out option
-unless the admin navigated back to the dashboard first.
+Each data row now renders TWO divs — one visible on desktop, one on
+mobile — controlled by Tailwind's responsive display utilities:
 
-The "Back to Dashboard" link at the top of each page content still
-exists as well, so the admin has two ways to go back: the content-area
-back link (prominent, contextual) and the navbar Dashboard button
-(persistent, always visible).
+  Desktop row:  className="hidden sm:grid ..."
+  Mobile row:   className="grid sm:hidden ..."
+
+This approach is cleaner than trying to hide/show individual cells
+inside a single row, because each layout can have its own column
+template independently.
+
+DESKTOP ROW shows:
+  Name | Email | Phone | Registered Date | Attended button | Remove button
+  (full text on buttons: "Attended"/"Mark", "Remove"/etc.)
+
+MOBILE ROW shows:
+  Name | Email | Phone | Attended button | Remove button (icon only)
+  (button labels shortened: "Yes"/"Mark" for attended; trash icon only
+   for remove to save space)
 
 ----------------------------------------------------
-HOW THE SIGN OUT WORKS
+PHONE NUMBER — ALWAYS VISIBLE
 ----------------------------------------------------
 
-1. Admin clicks "Sign Out" in the navbar
-2. logout() is called from AuthContext:
-   - Removes the JWT token from localStorage
-   - Sets the user state to null
-3. navigate("/login") redirects to the login page
-4. Any subsequent API calls will have no token → 401 Unauthorized
-5. The ProtectedRoute on /dashboard, /create-event, etc. will redirect
-   to /login if the user tries to go back
+In an earlier iteration, the phone number was removed from the mobile
+layout to save space. The user requested it be kept. It was added back
+to both the mobile header and mobile row:
+
+  Header:  <Phone size={11} /> Phone
+  Row:     {r.phone || <span className="text-gray-300">—</span>}
+
+The phone cell uses `truncate` so if a number is very long it clips
+with an ellipsis instead of breaking the layout.
+
+----------------------------------------------------
+SUMMARY OF ALL COLUMN CHANGES
+----------------------------------------------------
+
+Screen    | Columns shown
+----------|------------------------------------------------------
+Desktop   | Name, Email, Phone, Registered, Attended, Actions
+Mobile    | Name, Email, Phone, Attended, Actions (icon only)
+
+----------------------------------------------------
+WHY THIS APPROACH IS BETTER
+----------------------------------------------------
+
+1. Explicit pixel/fraction widths prevent columns from competing for
+   space — each column gets exactly what it needs
+
+2. Separate mobile/desktop rows means no hacks like negative margins
+   or overflow-x scroll — the layout simply reflows cleanly
+
+3. Phone number is preserved on all screens as requested, using
+   `truncate` to handle long numbers gracefully
+
+4. Action buttons have fixed pixel widths so they never stretch or
+   compress regardless of the data in other columns
 
 ====================================================

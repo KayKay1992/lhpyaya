@@ -187,7 +187,7 @@ const ViewRegistered = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {/* Table Header */}
-              <div className="grid grid-cols-6 gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px] gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <span className="flex items-center gap-1.5">
                   <User size={12} /> Name
                 </span>
@@ -201,6 +201,20 @@ const ViewRegistered = () => {
                 <span>Attended</span>
                 <span></span>
               </div>
+              {/* Mobile header */}
+              <div className="grid sm:hidden grid-cols-[1fr_1fr_1fr_72px_60px] gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <span className="flex items-center gap-1">
+                  <User size={11} /> Name
+                </span>
+                <span className="flex items-center gap-1">
+                  <Mail size={11} /> Email
+                </span>
+                <span className="flex items-center gap-1">
+                  <Phone size={11} /> Phone
+                </span>
+                <span>Attended</span>
+                <span></span>
+              </div>
               {/* Rows */}
               {filtered.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-sm">
@@ -210,49 +224,89 @@ const ViewRegistered = () => {
                 filtered.map((r, i) => (
                   <div
                     key={r._id}
-                    className={`grid grid-cols-6 gap-3 px-6 py-4 text-sm text-gray-700 items-center border-b border-gray-100 last:border-0 ${
+                    className={`border-b border-gray-100 last:border-0 ${
                       i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                     }`}
                   >
-                    <span className="font-medium truncate">{r.name}</span>
-                    <span className="text-gray-500 truncate">{r.email}</span>
-                    <span className="text-gray-500">
-                      {r.phone || <span className="text-gray-300">—</span>}
-                    </span>
-                    <span className="text-gray-400 text-xs">
-                      {new Date(r.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                    <div>
-                      <button
-                        onClick={() => handleToggleAttend(r._id)}
-                        disabled={togglingId === r._id}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition disabled:opacity-50 ${
-                          r.attended
-                            ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                            : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
-                        }`}
-                      >
-                        {r.attended ? (
-                          <CheckCircle2 size={13} />
-                        ) : (
-                          <Circle size={13} />
-                        )}
-                        {r.attended ? "Attended" : "Mark"}
-                      </button>
+                    {/* Desktop row */}
+                    <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
+                      <span className="font-medium truncate">{r.name}</span>
+                      <span className="text-gray-500 truncate">{r.email}</span>
+                      <span className="text-gray-500 truncate">
+                        {r.phone || <span className="text-gray-300">—</span>}
+                      </span>
+                      <span className="text-gray-400 text-xs">
+                        {new Date(r.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <div>
+                        <button
+                          onClick={() => handleToggleAttend(r._id)}
+                          disabled={togglingId === r._id}
+                          className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition disabled:opacity-50 ${
+                            r.attended
+                              ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                              : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          {r.attended ? (
+                            <CheckCircle2 size={13} />
+                          ) : (
+                            <Circle size={13} />
+                          )}
+                          {r.attended ? "Attended" : "Mark"}
+                        </button>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleDelete(r._id)}
+                          disabled={deletingId === r._id}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                        >
+                          <Trash2 size={13} />
+                          {deletingId === r._id ? "..." : "Remove"}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => handleDelete(r._id)}
-                        disabled={deletingId === r._id}
-                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
-                      >
-                        <Trash2 size={13} />
-                        {deletingId === r._id ? "Removing..." : "Remove"}
-                      </button>
+                    {/* Mobile row */}
+                    <div className="grid sm:hidden grid-cols-[1fr_1fr_1fr_72px_60px] gap-2 px-4 py-3 text-sm text-gray-700 items-center">
+                      <span className="font-medium truncate">{r.name}</span>
+                      <span className="text-gray-500 truncate text-xs">
+                        {r.email}
+                      </span>
+                      <span className="text-gray-500 truncate text-xs">
+                        {r.phone || <span className="text-gray-300">—</span>}
+                      </span>
+                      <div>
+                        <button
+                          onClick={() => handleToggleAttend(r._id)}
+                          disabled={togglingId === r._id}
+                          className={`flex items-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-lg border transition disabled:opacity-50 ${
+                            r.attended
+                              ? "bg-green-50 text-green-600 border-green-200"
+                              : "bg-gray-50 text-gray-400 border-gray-200"
+                          }`}
+                        >
+                          {r.attended ? (
+                            <CheckCircle2 size={12} />
+                          ) : (
+                            <Circle size={12} />
+                          )}
+                          {r.attended ? "Yes" : "Mark"}
+                        </button>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleDelete(r._id)}
+                          disabled={deletingId === r._id}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2 py-1.5 rounded-lg transition disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))

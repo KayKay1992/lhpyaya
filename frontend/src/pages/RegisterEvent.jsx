@@ -1,18 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import api from "../api";
 import toast from "react-hot-toast";
-import { CalendarDays, ArrowLeft, CheckCircle } from "lucide-react";
+import { CalendarDays, ArrowLeft, CheckCircle, LogIn, LogOut, LayoutDashboard } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import rccgLogo from "../assets/download (1).jpg";
+import yayaLogo from "../assets/yaya.png";
 
 const RegisterEvent = () => {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [eventImage, setEventImage] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const eventId = searchParams.get("eventId");
   const eventTitle = searchParams.get("title") || "Event";
+
+  useEffect(() => {
+    if (eventId) {
+      api
+        .get(`/events/${eventId}`)
+        .then((res) => {
+          if (res.data.image) setEventImage(`http://localhost:5000/${res.data.image}`);
+        })
+        .catch(() => {});
+    }
+  }, [eventId]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,6 +40,21 @@ const RegisterEvent = () => {
       toast.error("Invalid event. Please go back and try again.");
       return;
     }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    // Phone validation: 7–15 digits, optional leading +
+    const phoneRegex = /^\+?[0-9]{7,15}$/;
+    if (!phoneRegex.test(form.phone.trim().replace(/[\s\-().]/g, ""))) {
+      toast.error("Please enter a valid phone number (7–15 digits).");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post(`/registrations/${eventId}`, form);
@@ -66,7 +97,47 @@ const RegisterEvent = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+      {/* Navbar */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-orange-100 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <img src={rccgLogo} alt="RCCG Logo" className="w-10 h-10 rounded-full object-cover" />
+          <img src={yayaLogo} alt="YaYa Logo" className="w-10 h-10 rounded-full object-cover" />
+          <span className="text-lg font-bold text-gray-900 tracking-tight">LHP-YAYA</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              {user.role === "admin" && (
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="flex items-center gap-2 bg-[#ff9324] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-orange-500 transition"
+                >
+                  <LayoutDashboard size={15} /> Dashboard
+                </button>
+              )}
+              {user.role !== "admin" && (
+                <span className="text-sm text-gray-500 hidden sm:block">Hello, {user.name}</span>
+              )}
+              <button
+                onClick={() => { logout(); navigate("/"); }}
+                className="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition"
+              >
+                <LogOut size={15} /> Sign Out
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className="flex items-center gap-2 border border-[#ff9324] text-[#ff9324] text-sm font-semibold px-4 py-2 rounded-xl hover:bg-orange-50 transition"
+            >
+              <LogIn size={15} /> Sign In
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="flex items-start justify-center px-4 py-10">
       <div className="w-full max-w-md">
         {/* Back */}
         <Link
@@ -75,6 +146,17 @@ const RegisterEvent = () => {
         >
           <ArrowLeft size={15} /> Back to Events
         </Link>
+
+        {/* Event Flyer */}
+        {eventImage && (
+          <div className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-orange-100">
+            <img
+              src={eventImage}
+              alt={decodeURIComponent(eventTitle)}
+              className="w-full object-contain max-h-[480px]"
+            />
+          </div>
+        )}
 
         {/* Header */}
         <div className="text-center mb-8">
@@ -123,14 +205,14 @@ const RegisterEvent = () => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Phone{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
+                Phone
               </label>
               <input
                 type="tel"
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
+                required
                 placeholder="+1 234 567 8900"
                 className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
               />
@@ -145,6 +227,7 @@ const RegisterEvent = () => {
             </button>
           </form>
         </div>
+      </div>
       </div>
     </div>
   );

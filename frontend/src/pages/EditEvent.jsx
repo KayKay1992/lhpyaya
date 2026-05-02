@@ -1,9 +1,214 @@
-import React from 'react'
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import api from "../api";
+import toast from "react-hot-toast";
+import { ArrowLeft, CalendarDays, ImagePlus } from "lucide-react";
 
 const EditEvent = () => {
-  return (
-    <div>EditEvent</div>
-  )
-}
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+  });
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
-export default EditEvent
+  useEffect(() => {
+    api
+      .get(`/events/${id}`)
+      .then((res) => {
+        const e = res.data;
+        setForm({
+          title: e.title,
+          description: e.description,
+          date: e.date ? e.date.slice(0, 10) : "",
+          time: e.time,
+          location: e.location,
+        });
+        if (e.image) setPreview(`http://localhost:5000/${e.image}`);
+      })
+      .catch(() => toast.error("Failed to load event"))
+      .finally(() => setFetching(false));
+  }, [id]);
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleImage = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImage(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+      if (image) formData.append("image", image);
+      await api.put(`/events/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Event updated!");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update event");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">
+        Loading event...
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-10">
+      <div className="max-w-xl mx-auto">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#ff9324] mb-6 transition"
+        >
+          <ArrowLeft size={15} /> Back to Dashboard
+        </Link>
+
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#ff9324] shadow-lg mb-4">
+            <CalendarDays className="text-white" size={26} />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Event</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Update the event details below
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-xl border border-orange-100 p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Event Banner{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <label className="cursor-pointer flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-orange-200 rounded-2xl hover:border-[#ff9324] transition bg-orange-50 overflow-hidden">
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <ImagePlus
+                      size={28}
+                      className="text-[#ff9324] opacity-60"
+                    />
+                    <span className="text-xs">Click to change image</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImage}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Event Title
+              </label>
+              <input
+                type="text"
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                required
+                rows={3}
+                className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Time
+                </label>
+                <input
+                  type="text"
+                  name="time"
+                  value={form.time}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Location
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EditEvent;

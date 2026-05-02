@@ -1,96 +1,129 @@
 ===================================================
-FRONTEND — PUBLIC PAGES (Step 3)
+FRONTEND — ADMIN PAGES (Step 4)
 ===================================================
 
 FILES CHANGED
 -------------
-  src/pages/LandingPage.jsx    — fetches and displays all events
-  src/pages/RegisterEvent.jsx  — registration form for a specific event
+  src/pages/AdminDashboard.jsx  — event listing with edit/delete/view registrants
+  src/pages/CreateEvent.jsx     — form with image upload → POST /api/events
+  src/pages/EditEvent.jsx       — pre-filled form → PUT /api/events/:id
+  src/pages/ViewRegistered.jsx  — registrants table → GET /api/registrations/:eventId
 
 ---------------------------------------------------
-1. LANDINGPAGE.JSX
+1. ADMINDASHBOARD.JSX
 ---------------------------------------------------
 PURPOSE
-  The public-facing home page. Anyone can view it without logging in.
-  It fetches all events from the backend and displays them as cards.
+  The main admin control panel. Lists all events in a card grid with action buttons.
 
 STATE
-  events  — array of event objects returned from the API.
-  loading — true while the API call is in progress.
-
-DATA FETCHING — useEffect
-  On first render, calls GET /api/events via the api instance.
-  - On success: stores the events array in state.
-  - On error: sets events to an empty array (no crash).
-  - Always: sets loading to false when done.
+  events     — array of all events fetched from the API.
+  loading    — true while fetching.
+  deletingId — tracks which event is being deleted to disable its button.
 
 NAVBAR
-  - Shows the app brand/logo on the left.
-  - On the right, checks the AuthContext user:
-    - Not logged in → "Sign In" button → /login
-    - Logged in as admin → "Dashboard" button → /dashboard
-    - Logged in as regular user → shows "Hello, <name>"
-  This is sticky (stays at top while scrolling) with a frosted glass effect.
+  Shows LHP-YAYA logos, an "Admin" badge, the logged-in admin's name,
+  a "View Site" link to the landing page, and a Sign Out button that
+  calls logout() and redirects to /login.
 
-HERO SECTION
-  Static marketing text with a badge, heading, and tagline.
+FETCH ON MOUNT
+  Calls GET /api/events via fetchEvents(). Extracted as a named function
+  (not inline in useEffect) so it can be called again if needed.
 
-EVENTS GRID
-  Three states:
-  1. Loading  — shows a simple "Loading events..." message.
-  2. No events — shows a friendly empty state with an icon.
-  3. Has events — renders a responsive grid (1 → 2 → 3 columns).
+DELETE FLOW
+  1. window.confirm() asks for confirmation before proceeding.
+  2. Sets deletingId to the event's id (disables that card's delete button).
+  3. Calls DELETE /api/events/:id.
+  4. On success: filters the deleted event out of local state immediately —
+     no need to re-fetch the whole list.
+  5. Resets deletingId in the finally block.
 
-EVENT CARD
-  Each card shows:
-  - Event image (if one was uploaded) or a gradient placeholder.
-  - Title, description (clamped to 2 lines).
-  - Date (formatted with toLocaleDateString), time, location — each with an icon.
-  - "Register Now" button.
-
-  Clicking "Register Now" navigates to:
-    /register?eventId=<id>&title=<encodedTitle>
-  The eventId and title are passed as URL search params so the registration
-  page knows which event to register for without a separate API call.
-
-formatDate helper
-  Converts the ISO date string from MongoDB into a readable format:
-  e.g. "Wed, May 1, 2026"
+CARD ACTIONS (per event)
+  - "Registrants" → navigates to /view-registered?eventId=...&title=...
+  - "Edit"        → navigates to /edit-event/:id
+  - "Delete"      → triggers the delete flow above
 
 ---------------------------------------------------
-2. REGISTEREVENT.JSX
+2. CREATEEVENT.JSX
 ---------------------------------------------------
 PURPOSE
-  A public form where anyone (no account needed) can register for a specific event.
+  Admin form for creating a new event, including an optional banner image.
+
+STATE
+  form    — { title, description, date, time, location } controlled fields.
+  image   — the raw File object selected by the admin.
+  preview — a local object URL for showing the image preview before upload.
+  loading — true while the API call is in progress.
+
+IMAGE UPLOAD UI
+  A dashed-border clickable area wraps a hidden <input type="file">.
+  When a file is selected, URL.createObjectURL() creates a temporary
+  browser-side URL to show a live preview inside the upload area.
+
+SUBMIT FLOW
+  Uses FormData (not JSON) because the request includes a file:
+  1. Appends all text fields to FormData with Object.entries(form).forEach().
+  2. Appends the image file if one was selected.
+  3. Sends POST /api/events with Content-Type: multipart/form-data.
+     (The api instance default is application/json, so this is overridden here.)
+  4. On success: toast + navigate back to /dashboard.
+
+---------------------------------------------------
+3. EDITEVENT.JSX
+---------------------------------------------------
+PURPOSE
+  Same layout as CreateEvent but pre-fills fields with the existing event's data.
+
+KEY DIFFERENCE — useEffect on mount
+  Reads the event id from useParams() (URL: /edit-event/:id).
+  Calls GET /api/events/:id to fetch the current data and populate the form.
+  
+  Date handling: MongoDB stores dates as ISO strings (e.g. "2026-05-01T00:00:00Z").
+  .slice(0, 10) trims it to "2026-05-01" which is the format <input type="date"> needs.
+
+  Existing image: if the event has an image, sets the preview to its full URL
+  (http://localhost:5000/<path>) so the admin can see the current banner.
+
+SUBMIT FLOW
+  Same as CreateEvent but calls PUT /api/events/:id. Only sends a new image
+  file if the admin picked one — otherwise the existing image stays unchanged
+  (handled by the backend's "update only what was sent" pattern).
+
+fetching state
+  Shows a simple "Loading event..." screen while the initial GET is in flight,
+  preventing the form from rendering with empty values.
+
+---------------------------------------------------
+4. VIEWREGISTERED.JSX
+---------------------------------------------------
+PURPOSE
+  Shows the admin a table of everyone who registered for a specific event.
 
 URL PARAMS — useSearchParams
   Reads eventId and title from the URL query string:
-    /register?eventId=abc123&title=Tech%20Summit
-  This is how the page knows which event to submit the registration for.
+    /view-registered?eventId=abc123&title=Tech%20Summit
 
-STATE
-  form    — { name, email, phone } controlled form fields.
-  loading — true while the API call is in progress.
-  success — flips to true after a successful registration to show the success screen.
+DATA FETCHING
+  Calls GET /api/registrations/:eventId on mount.
+  The response contains: { event (title), total, registrants[] }.
+  Sets both eventTitle and registrants from the response.
 
-FLOW
-  1. User fills in name and email (phone is optional).
-  2. On submit, validates that eventId exists in the URL.
-  3. Calls POST /api/registrations/:eventId with { name, email, phone }.
-  4. On success: sets success = true → shows the success screen.
-  5. On error (e.g. already registered): shows a toast error message.
+TABLE LAYOUT
+  A 4-column grid (CSS grid, not <table>) for clean alignment:
+    Name | Email | Phone | Registered (date)
+  
+  - Alternating row background (white / gray-50) for readability.
+  - Phone shows an em dash (—) if the field is empty.
+  - Registration date formatted as "May 1, 2026".
+  - A badge in the header shows the total count.
 
-SUCCESS SCREEN
-  Instead of navigating away and losing context, the component swaps its UI
-  to a full success card with a green checkmark, a confirmation message showing
-  the event name, and a "Back to Events" button that navigates to /.
+EMPTY STATE
+  If no one has registered, shows a friendly icon and message.
 
-BACK LINK
-  An arrow link at the top navigates back to the landing page without
-  losing form context (uses Link, not navigate, so it is accessible).
-
-UI DESIGN
-  - Same warm gradient background and rounded-3xl card as the auth pages.
-  - Brand-coloured focus rings, bold submit button with orange shadow.
-  - Event title displayed in orange below the heading so users always know
-    which event they are registering for.
+---------------------------------------------------
+SHARED DESIGN PATTERNS
+---------------------------------------------------
+  - All admin pages use the same warm gradient background.
+  - Back arrow links use Link (not navigate) for proper accessibility.
+  - All forms disable the submit button and show loading text during API calls.
+  - Errors are shown via react-hot-toast.
+  - All admin routes are protected by ProtectedRoute in App.jsx.

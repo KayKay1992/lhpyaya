@@ -23,7 +23,7 @@ connectDB();
 app.use(express.json());
 
 //static folder for uploaded images
-app.use("/backend/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // routes
 app.use("/api/auth", require("./routes/authRoutes"));

@@ -1,71 +1,75 @@
 ===================================================
-FRONTEND — API.JS SETUP (src/api.js)
+FRONTEND — AUTHCONTEXT SETUP
 ===================================================
 
-PURPOSE
--------
-Instead of importing axios directly in every component and repeating the base URL
-and auth header logic everywhere, a single configured axios instance is created and
-exported. Every page imports this one instance and just provides the endpoint path.
+FILES CHANGED
+-------------
+  src/context/AuthContext.jsx    — created (auth state + logic)
+  src/main.jsx                   — updated (wrapped app in AuthProvider)
+  src/components/auth/ProtectedRoute.jsx — updated (reads real auth state)
 
 ---------------------------------------------------
-HOW IT WORKS
+1. AuthContext.jsx — How it works
 ---------------------------------------------------
+React Context lets you share state across the whole app without passing props
+through every component. AuthContext shares the logged-in user's info, loading
+state, and login/logout functions.
 
-1. AXIOS INSTANCE — axios.create()
-   axios.create() creates a new axios instance with shared default settings:
+STATE
+  user    — holds the logged-in user object (name, email, role) or null if not logged in.
+  loading — true while the app is checking whether the user is already logged in
+            (prevents the app from flashing the login page on refresh).
 
-   - baseURL: 'http://localhost:5000/api'
-     Every request made through this instance automatically prepends this URL.
-     So api.get('/events') actually calls http://localhost:5000/api/events.
+useEffect ON MOUNT (auto-login on refresh)
+  When the app first loads, it checks localStorage for a saved JWT token.
+  - If no token exists: sets loading to false and does nothing.
+  - If a token exists: calls GET /api/auth/me using the api instance (which
+    automatically attaches the token in the Authorization header).
+    - On success: sets the user state with the returned profile.
+    - On failure (expired/invalid token): removes the bad token from
+      localStorage and sets user to null.
+  - Either way: sets loading to false when done.
+  This means the user stays logged in across page refreshes.
 
-   - headers: { 'Content-Type': 'application/json' }
-     Tells the server that request bodies are JSON. This is needed for POST/PUT
-     requests that send data.
+login(token, userData)
+  Called after a successful login or signup. Saves the JWT token to localStorage
+  and sets the user state — triggering a re-render across the whole app.
 
-2. REQUEST INTERCEPTOR — api.interceptors.request.use()
-   An interceptor is a function that runs automatically on every request BEFORE
-   it is sent. This one:
+logout()
+  Removes the token from localStorage and sets user to null — instantly
+  making the app treat the user as logged out.
 
-   - Reads the JWT token from localStorage (where it gets stored after login).
-   - If a token exists, it adds it to the request headers:
-       Authorization: Bearer <token>
-   - Returns the modified config so the request proceeds normally.
-   - If no token exists (user not logged in), it leaves the headers unchanged
-     and the request goes out without the Authorization header — which is fine
-     for public endpoints like GET /api/events.
-
-   This means protected routes (create event, view registrants, etc.) work
-   automatically without any extra code in the components — as long as the
-   user is logged in and the token is in localStorage.
-
----------------------------------------------------
-HOW TO USE IT IN ANY PAGE
----------------------------------------------------
-
-  import api from '../api';
-
-  // GET request (no body)
-  const res = await api.get('/events');
-
-  // POST request (with body)
-  const res = await api.post('/auth/login', { email, password });
-
-  // PUT request (with body)
-  const res = await api.put(`/events/${id}`, formData);
-
-  // DELETE request
-  await api.delete(`/events/${id}`);
-
-  // File upload (multipart/form-data — override Content-Type)
-  const res = await api.post('/events', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-  });
+useAuth() — custom hook
+  Exported as a shortcut so any component can just write:
+    const { user, loading, login, logout } = useAuth();
+  instead of:
+    const { user, loading, login, logout } = useContext(AuthContext);
 
 ---------------------------------------------------
-WHY STORE THE TOKEN IN LOCALSTORAGE?
+2. main.jsx — AuthProvider wrapping
 ---------------------------------------------------
-localStorage persists across page refreshes and browser sessions, so the user
-stays logged in even after closing and reopening the browser. The token is saved
-there after a successful login and removed on logout. The interceptor reads it
-automatically on every request.
+AuthProvider is wrapped around the entire App inside BrowserRouter:
+
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>
+
+This makes the auth state (user, loading, login, logout) available to every
+component in the app, including all pages and the ProtectedRoute.
+
+---------------------------------------------------
+3. ProtectedRoute.jsx — Updated
+---------------------------------------------------
+Previously used hardcoded placeholders (isAuthenticated = false).
+Now it reads real state from AuthContext via the useAuth() hook:
+
+  const { user, loading } = useAuth();
+
+  - While loading is true: shows a loading message (prevents redirect flash).
+  - If user is null (not logged in): redirects to /login, preserving the
+    page the user was trying to reach in location.state.from.
+  - If user exists: renders the protected children components.
+
+This is the gatekeeper for all admin routes (/dashboard, /create-event, etc.).

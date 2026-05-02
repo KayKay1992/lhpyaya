@@ -1,0 +1,74 @@
+===================================================
+MONGOOSE MODELS — EXPLANATION
+===================================================
+
+OVERVIEW
+--------
+Three Mongoose models were created to represent the core data of the event registration app:
+User, Event, and Registration. Each model defines a schema — a blueprint that tells MongoDB
+what fields a document must/can have and what type and rules apply to each field.
+
+---------------------------------------------------
+1. USER MODEL (models/User.js)
+---------------------------------------------------
+Purpose: Stores admin and regular user accounts.
+
+Fields:
+  - name      : String, required, trimmed of whitespace.
+  - email     : String, required, must be unique across all users, auto-lowercased and trimmed.
+                The unique constraint prevents two accounts sharing the same email.
+  - password  : String, required. Will store a bcrypt hash (not plain text) when auth is implemented.
+  - role      : String, restricted to either "admin" or "user" via the enum option.
+                Defaults to "user" so new sign-ups are regular users unless explicitly set to admin.
+  - timestamps: Mongoose automatically adds createdAt and updatedAt fields.
+
+Key design decision: The role field is what separates admins from regular users.
+Only admins will be allowed to create, edit, and delete events.
+
+---------------------------------------------------
+2. EVENT MODEL (models/Event.js)
+---------------------------------------------------
+Purpose: Stores events that admins create, which users will see on the landing page.
+
+Fields:
+  - title       : String, required, trimmed.
+  - description : String, required. Provides details about the event.
+  - date        : Date type, required. Stored as a proper Date object so it can be sorted/filtered.
+  - time        : String, required. Stored as a string (e.g. "10:00 AM") for display flexibility.
+  - location    : String, required, trimmed.
+  - image       : String, optional (defaults to empty string). Stores the file path/URL of an
+                  uploaded event banner image handled by multer.
+  - createdBy   : References the User model using mongoose.Schema.Types.ObjectId with ref: "User".
+                  This creates a relationship — you can use .populate("createdBy") to get the
+                  full admin user object when querying events.
+  - timestamps  : Auto-added createdAt and updatedAt fields.
+
+Key design decision: The createdBy reference links each event to the admin who created it,
+which is useful for authorization checks (only the creator or any admin can edit/delete it).
+
+---------------------------------------------------
+3. REGISTRATION MODEL (models/Registration.js)
+---------------------------------------------------
+Purpose: Stores each registration submission from a user for a specific event.
+
+Fields:
+  - event  : References the Event model via ObjectId with ref: "Event". Required.
+             Links the registration to the specific event they signed up for.
+  - name   : String, required, trimmed. The registrant's full name.
+  - email  : String, required, auto-lowercased and trimmed. The registrant's email.
+  - phone  : String, optional (defaults to empty string). The registrant's phone number.
+  - timestamps: Auto-added createdAt and updatedAt fields.
+
+Key design decision: No user account is required to register. Anyone can submit their
+name, email, and phone to register for an event. The event field ties each registration
+to a specific event so admins can query and view all registrants per event.
+
+---------------------------------------------------
+HOW MODELS ARE EXPORTED
+---------------------------------------------------
+Each file ends with:
+  module.exports = mongoose.model('ModelName', schema);
+
+This creates the MongoDB collection automatically (Mongoose pluralizes the model name,
+e.g. "User" becomes the "users" collection) and exports it so controllers can import
+and use it to query, create, update, or delete documents.

@@ -35,7 +35,7 @@ const EditEvent = () => {
           time: e.time,
           location: e.location,
         });
-        if (e.image) setPreview(`http://localhost:5000/${e.image}`);
+        if (e.image) setPreview(`${import.meta.env.VITE_API_URL}/${e.image}`);
       })
       .catch(() => toast.error("Failed to load event"))
       .finally(() => setFetching(false));

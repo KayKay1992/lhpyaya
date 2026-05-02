@@ -138,7 +138,7 @@ const AdminDashboard = () => {
               >
                 {event.image ? (
                   <img
-                    src={`http://localhost:5000/${event.image}`}
+                    src={`${import.meta.env.VITE_API_URL}/${event.image}`}
                     alt={event.title}
                     className="w-full h-40 object-cover"
                   />

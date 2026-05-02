@@ -35,7 +35,7 @@ const RegisterEvent = () => {
         .get(`/events/${eventId}`)
         .then((res) => {
           if (res.data.image)
-            setEventImage(`http://localhost:5000/${res.data.image}`);
+            setEventImage(`${import.meta.env.VITE_API_URL}/${res.data.image}`);
           setEventDetails({
             date: res.data.date,
             time: res.data.time,

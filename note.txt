@@ -1,106 +1,132 @@
 ====================================================
-  FEATURE: Event Details on Registration Success Screen
+  FEATURE: Environment Variable for Backend URL
+  (VITE_API_URL replaces hardcoded localhost:5000)
 ====================================================
 
 OVERVIEW
 --------
-After a user successfully registers for an event, the success screen
-now shows the event's date, time, and location so they immediately know
-when and where to show up — without having to go back to the landing page
-to look it up.
+The frontend had the backend URL hardcoded as "http://localhost:5000"
+in 5 different places. This meant that when deploying to production,
+a developer would have to manually find and update every occurrence.
+
+The fix centralizes the URL into a single environment variable:
+  VITE_API_URL=http://localhost:5000
+
+Changing it once in one file now updates all 5 usages automatically.
 
 ----------------------------------------------------
-WHAT WAS ADDED
+THE PROBLEM
 ----------------------------------------------------
 
-FILE: frontend/src/pages/RegisterEvent.jsx
+"http://localhost:5000" appeared hardcoded in:
 
-1. Two new icon imports from lucide-react:
-   - Clock   (for the time row)
-   - MapPin  (for the location row)
-   These join the existing CalendarDays icon used for the date row.
+  1. src/api.js                    → axios baseURL
+  2. src/pages/RegisterEvent.jsx   → event image URL
+  3. src/pages/EditEvent.jsx       → event image preview URL
+  4. src/pages/LandingPage.jsx     → event banner image URL
+  5. src/pages/AdminDashboard.jsx  → event banner image URL
 
-2. New state variable: eventDetails
-   - const [eventDetails, setEventDetails] = useState(null);
-   - Starts as null (nothing to show yet)
-   - Gets populated when the event data is fetched on page load
+In a local development environment this works fine. But when the app
+is deployed (e.g. to Vercel for the frontend, Railway/Render for the
+backend), the backend URL changes to something like:
+  https://my-api.onrender.com
 
-3. Extended the existing useEffect fetch:
-   The page already fetched GET /api/events/:eventId on mount to get
-   the event image for display above the form. That same API response
-   also contains date, time, and location. These are now stored:
-
-     setEventDetails({
-       date: res.data.date,
-       time: res.data.time,
-       location: res.data.location,
-     });
-
-   No extra API call is made — the same response that was already being
-   used for the image is also used for the event details. This is
-   efficient and avoids unnecessary network requests.
-
-4. Info card on the success screen:
-   After the "You're registered!" message, a new orange info card
-   appears (only if eventDetails is not null):
-
-     <div className="bg-orange-50 border border-orange-100 rounded-2xl ...">
-       <CalendarDays /> Full date (e.g. "Sunday, May 4, 2026")
-       <Clock />       Time (e.g. "10:00 AM")
-       <MapPin />      Location (e.g. "RCCG Parish Hall")
-     </div>
-
-   The date is formatted using toLocaleDateString with options:
-     weekday: "long", year: "numeric", month: "long", day: "numeric"
-   This gives a human-readable format instead of a raw ISO date string.
+With hardcoding, ALL 5 files need manual edits before building. With
+an environment variable, only the hosting platform's config needs updating.
 
 ----------------------------------------------------
-HOW THE FULL FLOW WORKS
+WHAT WAS CREATED
 ----------------------------------------------------
 
-1. User lands on /register?eventId=...&title=...
-2. useEffect fires on mount → fetches GET /api/events/:eventId
-3. Response stores:
-   - event.image  → shown as the flyer above the form
-   - event.date, event.time, event.location → saved in eventDetails state
-4. User fills in Name, Email, Phone and submits
-5. POST /api/registrations/:eventId succeeds
-6. success state is set to true → success screen renders
-7. The success screen shows:
-   - Green checkmark + "You're registered!" heading
-   - Confirmation message with the event name
-   - Orange info card with date, time, location
-   - "Back to Events" button
+NEW FILE: frontend/.env
+
+  VITE_API_URL=http://localhost:5000
+
+Rules about .env in Vite projects:
+- The file must be named .env (or .env.local, .env.production, etc.)
+- Variables MUST be prefixed with VITE_ to be exposed to the browser
+- Variables without the VITE_ prefix are kept private (server-side only)
+- Vite reads this file at BUILD TIME and replaces all usages with the
+  actual value in the compiled output
 
 ----------------------------------------------------
-GRACEFUL DEGRADATION
+WHAT WAS CHANGED IN EACH FILE
 ----------------------------------------------------
 
-The info card is wrapped in a conditional:
-  {eventDetails && ( ... )}
+1. src/api.js
+   Before:  baseURL: "http://localhost:5000/api"
+   After:   baseURL: `${import.meta.env.VITE_API_URL}/api`
+
+   This is the axios instance used for all API calls. The /api path
+   is appended after the base URL so it still works the same way.
+
+2. src/pages/RegisterEvent.jsx
+   Before:  `http://localhost:5000/${res.data.image}`
+   After:   `${import.meta.env.VITE_API_URL}/${res.data.image}`
+
+   Used when setting the event flyer image above the registration form.
+
+3. src/pages/EditEvent.jsx
+   Before:  `http://localhost:5000/${e.image}`
+   After:   `${import.meta.env.VITE_API_URL}/${e.image}`
+
+   Used when pre-filling the image preview from the existing event data.
+
+4. src/pages/LandingPage.jsx
+   Before:  src={`http://localhost:5000/${event.image}`}
+   After:   src={`${import.meta.env.VITE_API_URL}/${event.image}`}
+
+   Used in the event card grid to show the event banner image.
+
+5. src/pages/AdminDashboard.jsx
+   Before:  src={`http://localhost:5000/${event.image}`}
+   After:   src={`${import.meta.env.VITE_API_URL}/${event.image}`}
+
+   Same as LandingPage — event card banners in the admin view.
+
+----------------------------------------------------
+HOW import.meta.env WORKS IN VITE
+----------------------------------------------------
+
+Vite uses import.meta.env (not process.env like Node.js or Create
+React App). At build time, Vite replaces every occurrence of:
+  import.meta.env.VITE_API_URL
+with the actual string value from .env. So the compiled output
+contains the literal URL, not a runtime variable lookup.
 
 This means:
-- If the initial event fetch failed (network error, invalid ID, etc.),
-  eventDetails remains null and the card simply doesn't appear
-- The success confirmation still shows correctly — the user still
-  knows they registered
-- No error is shown for the missing details, keeping the screen clean
+- No performance cost at runtime
+- Works in the browser (no Node.js needed)
+- Only variables prefixed with VITE_ are included in the bundle
 
 ----------------------------------------------------
-WHY THIS IS USEFUL
+HOW TO USE IN PRODUCTION
 ----------------------------------------------------
 
-Before this change, a user who registered would see:
-  "You have successfully registered for [Event Name]. See you there!"
+When deploying:
+- Vercel: go to Project Settings → Environment Variables → add
+    VITE_API_URL = https://your-backend.onrender.com
+- Netlify: go to Site Settings → Environment Variables → add same
+- The frontend build will automatically use the production URL
 
-They would then need to go back to the landing page, find the event
-card, and read the details again to know when to show up.
+For local development, the frontend .env file stays as:
+  VITE_API_URL=http://localhost:5000
 
-Now the success screen answers the most important questions immediately:
-  "When is it?"    → Full date shown
-  "What time?"     → Time shown
-  "Where is it?"   → Location shown
+IMPORTANT: After changing .env, restart the Vite dev server
+  (npm run dev) for the new value to take effect. Vite reads
+  .env at startup, not on every file save.
 
-This reduces confusion and eliminates a step for the user.
+----------------------------------------------------
+.env AND .gitignore
+----------------------------------------------------
+
+.env files often contain secrets (API keys, passwords). It is best
+practice to add .env to .gitignore so it is not pushed to GitHub.
+For this project the .env only contains the backend URL (not a secret),
+but the convention should still be followed.
+
+If .env is gitignored, create a .env.example file with placeholder
+values so other developers know what variables are needed:
+  VITE_API_URL=http://localhost:5000
 
 ====================================================

@@ -1,90 +1,145 @@
 ====================================================
-  FEATURE: Admin Can Delete a Registrant
+  FEATURES: Search, Attendance Tracking & Bug Fixes
 ====================================================
 
 OVERVIEW
 --------
-Admins can now remove individual registrants from an event directly
-from the ViewRegistered page. A "Remove" button appears on every row
-of the registrants table. Clicking it asks for confirmation, then
-permanently deletes the record from the database and removes the row
-from the screen without needing to reload the page.
+Three things were implemented in this session:
 
-----------------------------------------------------
-BACKEND CHANGES
-----------------------------------------------------
+  1. Admin can search for a registrant by name or email
+  2. Admin can mark/unmark a registrant as "attended"
+  3. Two bugs were fixed:
+       - CORS was blocking PATCH requests
+       - A regex escape in RegisterEvent.jsx was causing a Vite 500 error
 
-1. controllers/registrationController.js
-   - Added a new async function: deleteRegistrant
-   - It receives the registration's unique ID from the URL parameter
-     (:registrationId)
-   - Uses Mongoose's findByIdAndDelete() to locate and remove the record
-   - Returns 200 with a success message if found and deleted
-   - Returns 404 if no matching registration was found
-   - Returns 500 on unexpected server errors
-   - Exported alongside the existing two functions
+====================================================
+FEATURE 1 — Search Registrants
+====================================================
 
-   Key code logic:
-     const registration = await Registration.findByIdAndDelete(req.params.registrationId);
-     if (!registration) return res.status(404).json({ message: "Registrant not found" });
-     res.status(200).json({ message: "Registrant deleted" });
+WHERE: frontend/src/pages/ViewRegistered.jsx
 
-2. routes/registrationRoutes.js
-   - Imported deleteRegistrant from the controller
-   - Added a new DELETE route:
-       DELETE /api/registrations/:registrationId
-   - Protected with both `protect` (JWT check) and `adminOnly` (role check)
-     middlewares, so only logged-in admins can call it
-   - The :registrationId in the URL is the MongoDB _id of the registration
-     document, NOT the event ID
+HOW IT WORKS:
+- Added a `search` state variable (empty string by default)
+- Added a search input box that appears above the table whenever there
+  are registrants to show
+- A `filtered` derived array is computed from the `registrants` state:
 
-----------------------------------------------------
-FRONTEND CHANGES
-----------------------------------------------------
+    const filtered = registrants.filter(
+      (r) =>
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
+        r.email.toLowerCase().includes(search.toLowerCase()),
+    );
 
-3. pages/ViewRegistered.jsx
-   - Added Trash2 icon import from lucide-react
-   - Added deletingId state (null when idle, holds the _id of the
-     registration currently being deleted — prevents double-clicks)
-   - Added handleDelete(id) async function:
-       * Shows window.confirm() before proceeding
-       * Calls DELETE /api/registrations/:id via the axios instance
-       * On success: filters the deleted entry out of the registrants
-         state array (instant UI update, no re-fetch needed)
-       * Shows a toast success or error message
-       * Resets deletingId to null when done
-   - Changed the table grid from grid-cols-4 to grid-cols-5 to add an
-     Actions column on the right
-   - Each row now has a "Remove" button:
-       * Shows the Trash2 icon + "Remove" label
-       * While deleting: shows "Removing..." and is disabled
-       * Styled in red tones to signal a destructive action
+- The table renders `filtered` instead of `registrants`, so the list
+  updates live as the admin types — no API call needed, it's purely
+  a client-side filter
+- If the search term has no matches, the table body shows:
+  "No results match your search."
+- The total count badge in the header still shows the full count
+  (not the filtered count), so the admin always sees how many total
+  registrations exist for the event
 
-----------------------------------------------------
-HOW THE FULL FLOW WORKS
-----------------------------------------------------
+====================================================
+FEATURE 2 — Attendance Marking
+====================================================
 
-1. Admin navigates to the Registrants page for an event
-2. The table lists all registrants with Name, Email, Phone, Date, and
-   a Remove button per row
-3. Admin clicks "Remove" on a row
-4. Browser shows: "Remove this registrant?" — admin clicks OK
-5. Frontend sends:  DELETE /api/registrations/<registrationId>
+BACKEND CHANGES:
+
+1. models/Registration.js
+   - Added a new field to the schema:
+       attended: { type: Boolean, default: false }
+   - Every new registration starts as not attended
+   - Existing registrations in MongoDB will automatically return
+     `attended: false` when read (Mongoose default applies to reads too)
+
+2. controllers/registrationController.js — toggleAttendance()
+   - Finds the registration by :registrationId from the URL
+   - Flips the boolean:  registration.attended = !registration.attended
+   - Saves the document
+   - Returns: { attended: true/false }  so the frontend knows the new state
+   - Returns 404 if the ID doesn't exist
+   - Protected: only admins can call this
+
+3. routes/registrationRoutes.js
+   - Added:
+       PATCH /api/registrations/:registrationId/attend
+   - Protected with `protect` (JWT check) and `adminOnly` (role check)
+   - Uses PATCH because we're partially updating one field (not replacing
+     the whole document like PUT)
+
+FRONTEND CHANGES (ViewRegistered.jsx):
+
+- Added `togglingId` state — holds the _id of the registration currently
+  being toggled, used to show a loading state and prevent double-clicks
+- Added handleToggleAttend(id) function:
+    * Calls  PATCH /api/registrations/:id/attend
+    * On success: updates only that one row in state using .map()
+      (no full re-fetch needed)
+    * Shows toast: "Marked as attended" or "Marked as not attended"
+      depending on the new value returned from the server
+- Added an "Attended" column to the table (grid expanded from 5 → 6 cols)
+- Each row has a toggle button:
+    * Not attended  →  grey circle icon + "Mark" label
+    * Attended      →  green filled circle icon + "Attended" label
+  The button is styled green when attended, grey when not, so the admin
+  can see attendance at a glance without pressing anything
+
+====================================================
+BUG FIX 1 — CORS Blocking PATCH Requests
+====================================================
+
+FILE: backend/server.js
+
+PROBLEM:
+  The CORS middleware only listed: ["GET", "POST", "PUT", "DELETE"]
+  When the frontend sent a PATCH request, the browser first sends an
+  OPTIONS preflight. The server responded that PATCH is not in the
+  allowed methods, so the browser blocked the actual request with:
+  "Method PATCH is not allowed by Access-Control-Allow-Methods"
+
+FIX:
+  Added "PATCH" to the methods array:
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+
+  The backend must be restarted for this change to take effect.
+
+====================================================
+BUG FIX 2 — Vite 500 on RegisterEvent.jsx
+====================================================
+
+FILE: frontend/src/pages/RegisterEvent.jsx
+
+PROBLEM:
+  The phone validation regex contained an escaped hyphen  \-  inside
+  a character class:
+    /[\s\-().]/g
+  This is technically valid JS, but the backslash before the hyphen can
+  confuse some bundler/transform pipelines (Vite threw a 500 error when
+  hot-reloading the file).
+
+FIX:
+  Moved the hyphen to the end of the character class where it is
+  unambiguous and needs no escaping:
+    /[\s().-]/g
+  Same behaviour, no parse ambiguity, Vite no longer errors.
+
+====================================================
+HOW THE FULL ATTENDANCE FLOW WORKS
+====================================================
+
+1. Admin opens Registrants page for an event
+2. Table loads with all registrants — "Attended" column shows grey
+   "Mark" buttons for everyone
+3. Admin optionally types a name or email in the search box to find
+   a specific person
+4. Admin clicks "Mark" on a row
+5. Frontend sends:  PATCH /api/registrations/<id>/attend
    with the JWT token in the Authorization header
-6. Backend middleware verifies the token and confirms admin role
-7. Controller deletes the document from MongoDB
-8. Frontend receives success → filters that row out of state
-9. The row disappears instantly. Toast shows "Registrant removed"
-
-----------------------------------------------------
-SECURITY NOTES
-----------------------------------------------------
-- The DELETE endpoint is protected by JWT authentication (protect
-  middleware) — unauthenticated users cannot call it
-- The adminOnly middleware ensures regular users (role: "user") get a
-  403 Forbidden response even if they have a valid token
-- The registration ID used in the URL is a MongoDB ObjectId — it is
-  not guessable, and it can only be obtained by first viewing the
-  registrants list (which is also admin-only)
+6. CORS preflight now succeeds because PATCH is in the allowed methods
+7. Backend verifies JWT, checks admin role, flips the attended boolean,
+   saves, and returns the new value
+8. Frontend updates just that row in state — button turns green and
+   shows "Attended"
+9. Admin can click "Attended" again to un-mark the person (toggle)
 
 ====================================================

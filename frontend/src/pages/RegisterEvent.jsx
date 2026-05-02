@@ -58,7 +58,7 @@ const RegisterEvent = () => {
 
     // Phone validation: 7–15 digits, optional leading +
     const phoneRegex = /^\+?[0-9]{7,15}$/;
-    if (!phoneRegex.test(form.phone.trim().replace(/[\s\-().]/g, ""))) {
+    if (!phoneRegex.test(form.phone.trim().replace(/[\s().-]/g, ""))) {
       toast.error("Please enter a valid phone number (7–15 digits).");
       return;
     }

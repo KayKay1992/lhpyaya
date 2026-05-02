@@ -23,6 +23,10 @@ const registrationSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    attended: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

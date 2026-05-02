@@ -2,13 +2,25 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../api";
 import toast from "react-hot-toast";
-import { ArrowLeft, Users, Mail, Phone, User, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  Mail,
+  Phone,
+  User,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Search,
+} from "lucide-react";
 
 const ViewRegistered = () => {
   const [registrants, setRegistrants] = useState([]);
   const [eventTitle, setEventTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [search, setSearch] = useState("");
   const [searchParams] = useSearchParams();
 
   const eventId = searchParams.get("eventId");
@@ -42,6 +54,31 @@ const ViewRegistered = () => {
     }
   };
 
+  const handleToggleAttend = async (id) => {
+    setTogglingId(id);
+    try {
+      const res = await api.patch(`/registrations/${id}/attend`);
+      setRegistrants((prev) =>
+        prev.map((r) =>
+          r._id === id ? { ...r, attended: res.data.attended } : r,
+        ),
+      );
+      toast.success(
+        res.data.attended ? "Marked as attended" : "Marked as not attended",
+      );
+    } catch {
+      toast.error("Failed to update attendance");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const filtered = registrants.filter(
+    (r) =>
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      r.email.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-10">
       <div className="max-w-4xl mx-auto">
@@ -68,6 +105,23 @@ const ViewRegistered = () => {
           )}
         </div>
 
+        {/* Search Bar */}
+        {!loading && registrants.length > 0 && (
+          <div className="relative mb-6">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+            />
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-20 text-gray-400 text-sm">
             Loading registrants...
@@ -82,7 +136,7 @@ const ViewRegistered = () => {
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             {/* Table Header */}
-            <div className="grid grid-cols-5 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="grid grid-cols-6 gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span className="flex items-center gap-1.5">
                 <User size={12} /> Name
               </span>
@@ -93,40 +147,65 @@ const ViewRegistered = () => {
                 <Phone size={12} /> Phone
               </span>
               <span>Registered</span>
+              <span>Attended</span>
               <span></span>
             </div>
             {/* Rows */}
-            {registrants.map((r, i) => (
-              <div
-                key={r._id}
-                className={`grid grid-cols-5 gap-4 px-6 py-4 text-sm text-gray-700 items-center border-b border-gray-100 last:border-0 ${
-                  i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                }`}
-              >
-                <span className="font-medium truncate">{r.name}</span>
-                <span className="text-gray-500 truncate">{r.email}</span>
-                <span className="text-gray-500">
-                  {r.phone || <span className="text-gray-300">—</span>}
-                </span>
-                <span className="text-gray-400 text-xs">
-                  {new Date(r.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => handleDelete(r._id)}
-                    disabled={deletingId === r._id}
-                    className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
-                  >
-                    <Trash2 size={13} />
-                    {deletingId === r._id ? "Removing..." : "Remove"}
-                  </button>
-                </div>
+            {filtered.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm">
+                No results match your search.
               </div>
-            ))}
+            ) : (
+              filtered.map((r, i) => (
+                <div
+                  key={r._id}
+                  className={`grid grid-cols-6 gap-3 px-6 py-4 text-sm text-gray-700 items-center border-b border-gray-100 last:border-0 ${
+                    i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                  }`}
+                >
+                  <span className="font-medium truncate">{r.name}</span>
+                  <span className="text-gray-500 truncate">{r.email}</span>
+                  <span className="text-gray-500">
+                    {r.phone || <span className="text-gray-300">—</span>}
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    {new Date(r.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <div>
+                    <button
+                      onClick={() => handleToggleAttend(r._id)}
+                      disabled={togglingId === r._id}
+                      className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition disabled:opacity-50 ${
+                        r.attended
+                          ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                          : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {r.attended ? (
+                        <CheckCircle2 size={13} />
+                      ) : (
+                        <Circle size={13} />
+                      )}
+                      {r.attended ? "Attended" : "Mark"}
+                    </button>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => handleDelete(r._id)}
+                      disabled={deletingId === r._id}
+                      className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                      {deletingId === r._id ? "Removing..." : "Remove"}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

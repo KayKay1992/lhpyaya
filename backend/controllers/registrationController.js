@@ -80,4 +80,26 @@ const deleteRegistrant = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, getRegistrantsByEvent, deleteRegistrant };
+// @desc    Toggle attendance for a registrant
+// @route   PATCH /api/registrations/:registrationId/attend
+// @access  Private (admin only)
+const toggleAttendance = async (req, res) => {
+  try {
+    const registration = await Registration.findById(req.params.registrationId);
+    if (!registration) {
+      return res.status(404).json({ message: "Registrant not found" });
+    }
+    registration.attended = !registration.attended;
+    await registration.save();
+    res.status(200).json({ attended: registration.attended });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+module.exports = {
+  registerForEvent,
+  getRegistrantsByEvent,
+  deleteRegistrant,
+  toggleAttendance,
+};

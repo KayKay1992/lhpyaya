@@ -1,80 +1,96 @@
 ===================================================
-FRONTEND — LOGIN & SIGNUP PAGES
+FRONTEND — PUBLIC PAGES (Step 3)
 ===================================================
 
 FILES CHANGED
 -------------
-  src/pages/LoginPage.jsx   — filled with form UI + login logic
-  src/pages/SignupPage.jsx  — filled with form UI + signup logic
-
-Both pages follow the same pattern: controlled form state → submit → API call →
-call login() from AuthContext → redirect.
+  src/pages/LandingPage.jsx    — fetches and displays all events
+  src/pages/RegisterEvent.jsx  — registration form for a specific event
 
 ---------------------------------------------------
-1. LOGINPAGE.JSX
+1. LANDINGPAGE.JSX
 ---------------------------------------------------
+PURPOSE
+  The public-facing home page. Anyone can view it without logging in.
+  It fetches all events from the backend and displays them as cards.
+
 STATE
-  form    — object holding { email, password }, updated on every keystroke via handleChange.
-  loading — boolean, true while the API call is in flight (disables the button).
+  events  — array of event objects returned from the API.
+  loading — true while the API call is in progress.
+
+DATA FETCHING — useEffect
+  On first render, calls GET /api/events via the api instance.
+  - On success: stores the events array in state.
+  - On error: sets events to an empty array (no crash).
+  - Always: sets loading to false when done.
+
+NAVBAR
+  - Shows the app brand/logo on the left.
+  - On the right, checks the AuthContext user:
+    - Not logged in → "Sign In" button → /login
+    - Logged in as admin → "Dashboard" button → /dashboard
+    - Logged in as regular user → shows "Hello, <name>"
+  This is sticky (stays at top while scrolling) with a frosted glass effect.
+
+HERO SECTION
+  Static marketing text with a badge, heading, and tagline.
+
+EVENTS GRID
+  Three states:
+  1. Loading  — shows a simple "Loading events..." message.
+  2. No events — shows a friendly empty state with an icon.
+  3. Has events — renders a responsive grid (1 → 2 → 3 columns).
+
+EVENT CARD
+  Each card shows:
+  - Event image (if one was uploaded) or a gradient placeholder.
+  - Title, description (clamped to 2 lines).
+  - Date (formatted with toLocaleDateString), time, location — each with an icon.
+  - "Register Now" button.
+
+  Clicking "Register Now" navigates to:
+    /register?eventId=<id>&title=<encodedTitle>
+  The eventId and title are passed as URL search params so the registration
+  page knows which event to register for without a separate API call.
+
+formatDate helper
+  Converts the ISO date string from MongoDB into a readable format:
+  e.g. "Wed, May 1, 2026"
+
+---------------------------------------------------
+2. REGISTEREVENT.JSX
+---------------------------------------------------
+PURPOSE
+  A public form where anyone (no account needed) can register for a specific event.
+
+URL PARAMS — useSearchParams
+  Reads eventId and title from the URL query string:
+    /register?eventId=abc123&title=Tech%20Summit
+  This is how the page knows which event to submit the registration for.
+
+STATE
+  form    — { name, email, phone } controlled form fields.
+  loading — true while the API call is in progress.
+  success — flips to true after a successful registration to show the success screen.
 
 FLOW
-  1. User fills in email and password.
-  2. On submit, e.preventDefault() stops the page from refreshing.
-  3. Calls POST /api/auth/login with the form data via the api instance.
-  4. On success:
-       - Calls login(token, user) from AuthContext, which saves the token to
-         localStorage and sets the user state globally.
-       - Shows a success toast: "Welcome back, <name>!"
-       - Redirects the user. If they were redirected to /login from a protected
-         route (e.g. they tried to go to /dashboard while logged out), they are
-         sent back to that original page using location.state?.from?.pathname.
-         Otherwise they go to /dashboard.
-  5. On error: shows the server's error message via toast (e.g. "Invalid email or password").
-  6. loading is always reset to false in the finally block.
+  1. User fills in name and email (phone is optional).
+  2. On submit, validates that eventId exists in the URL.
+  3. Calls POST /api/registrations/:eventId with { name, email, phone }.
+  4. On success: sets success = true → shows the success screen.
+  5. On error (e.g. already registered): shows a toast error message.
 
-UI
-  - Clean centered card with email + password inputs.
-  - Submit button shows "Signing in..." while loading and is disabled to prevent double-submit.
-  - Link to /signup at the bottom.
-  - Focus ring uses the brand color (#ff9324).
+SUCCESS SCREEN
+  Instead of navigating away and losing context, the component swaps its UI
+  to a full success card with a green checkmark, a confirmation message showing
+  the event name, and a "Back to Events" button that navigates to /.
 
----------------------------------------------------
-2. SIGNUPPAGE.JSX
----------------------------------------------------
-STATE
-  form    — object holding { name, email, password, confirmPassword }.
-  loading — boolean for the API call.
+BACK LINK
+  An arrow link at the top navigates back to the landing page without
+  losing form context (uses Link, not navigate, so it is accessible).
 
-FLOW
-  1. Client-side password match check before sending the request:
-       if (form.password !== form.confirmPassword) → toast error, return early.
-     This avoids an unnecessary API call for a simple mismatch.
-  2. Calls POST /api/auth/register with { name, email, password }.
-     (confirmPassword is NOT sent to the backend — it's only for client validation.)
-  3. On success:
-       - Calls login(token, user) — same as login page, immediately logs the user in.
-       - Shows a success toast: "Account created! Welcome, <name>!"
-       - Redirects to /dashboard.
-  4. On error: shows server error toast (e.g. "User already exists with this email").
-
-UI
-  - Same card layout as LoginPage for visual consistency.
-  - Four fields: Full Name, Email, Password, Confirm Password.
-  - Submit button shows "Creating account..." while loading.
-  - Link to /login at the bottom.
-
----------------------------------------------------
-SHARED PATTERNS
----------------------------------------------------
-handleChange
-  Uses the spread pattern to update only the changed field:
-    setForm({ ...form, [e.target.name]: e.target.value })
-  The input's name attribute must match the key in the form state object.
-
-Error handling
-  err.response?.data?.message uses optional chaining to safely read the
-  server's error message. Falls back to a generic message if unavailable.
-
-toast (react-hot-toast)
-  toast.success() and toast.error() show non-blocking notification popups.
-  The Toaster component in main.jsx renders them in the bottom-right corner.
+UI DESIGN
+  - Same warm gradient background and rounded-3xl card as the auth pages.
+  - Brand-coloured focus rings, bold submit button with orange shadow.
+  - Event title displayed in orange below the heading so users always know
+    which event they are registering for.

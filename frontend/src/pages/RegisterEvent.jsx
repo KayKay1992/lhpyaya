@@ -39,6 +39,7 @@ const RegisterEvent = () => {
             date: res.data.date,
             time: res.data.time,
             location: res.data.location,
+            description: res.data.description,
           });
         })
         .catch(() => {});
@@ -209,6 +210,18 @@ const RegisterEvent = () => {
                 alt={decodeURIComponent(eventTitle)}
                 className="w-full object-contain max-h-[480px]"
               />
+            </div>
+          )}
+
+          {/* Event Description */}
+          {eventDetails?.description && (
+            <div className="bg-white rounded-2xl border border-orange-100 shadow-sm px-6 py-4 mb-6">
+              <h2 className="text-sm font-semibold text-[#ff9324] uppercase tracking-wide mb-2">
+                About this Event
+              </h2>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {eventDetails.description}
+              </p>
             </div>
           )}
 

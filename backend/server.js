@@ -2,15 +2,23 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const connectDB = require("./config/db");
 
 const app = express();
 
 // middleware to handle CORS
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+  : ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // allow requests with no origin (mobile apps, curl, Render health checks)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
@@ -21,9 +29,6 @@ connectDB();
 
 // parse requests of content-type - application/json
 app.use(express.json());
-
-//static folder for uploaded images
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // routes
 app.use("/api/auth", require("./routes/authRoutes"));

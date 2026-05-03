@@ -46,7 +46,7 @@ const createEvent = async (req, res) => {
       date,
       time,
       location,
-      image: req.file ? req.file.path.replace(/\\/g, "/") : "",
+      image: req.file ? req.file.path : "",
       createdBy: req.user.id,
     });
     res.status(201).json(event);
@@ -73,7 +73,7 @@ const updateEvent = async (req, res) => {
     event.time = time || event.time;
     event.location = location || event.location;
     if (req.file) {
-      event.image = req.file.path.replace(/\\/g, "/");
+      event.image = req.file.path;
     }
 
     const updatedEvent = await event.save();

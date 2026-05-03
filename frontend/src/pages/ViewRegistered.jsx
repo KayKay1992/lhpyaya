@@ -86,7 +86,7 @@ const ViewRegistered = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50">
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-orange-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

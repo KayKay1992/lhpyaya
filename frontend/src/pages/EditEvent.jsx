@@ -35,7 +35,7 @@ const EditEvent = () => {
           time: e.time,
           location: e.location,
         });
-        if (e.image) setPreview(`${import.meta.env.VITE_API_URL}/${e.image}`);
+        if (e.image) setPreview(e.image);
       })
       .catch(() => toast.error("Failed to load event"))
       .finally(() => setFetching(false));
@@ -78,7 +78,7 @@ const EditEvent = () => {
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50">
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-orange-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

@@ -1,132 +1,311 @@
-====================================================
-  FEATURE: Environment Variable for Backend URL
-  (VITE_API_URL replaces hardcoded localhost:5000)
-====================================================
+================================================================
+  LHP-YAYA PROJECT — DEPLOYMENT SETUP & CLOUDINARY SETUP NOTES
+================================================================
+Written: May 2, 2026
+Project: Full-stack event registration app
+Stack:   React 19 + Vite (frontend) | Express.js + MongoDB Atlas (backend)
+Deploy:  Frontend → Vercel | Backend → Render
 
-OVERVIEW
+
+================================================================
+SECTION 1: HOW THE PROJECT WAS PREPARED FOR DEPLOYMENT
+================================================================
+
+PROBLEM BEFORE PREPARATION
+---------------------------
+The project was only set up to run locally. Several things would
+break when deployed to real servers:
+
+  1. No .gitignore → node_modules, .env secrets, and local uploads
+     would all be pushed to GitHub accidentally.
+
+  2. React Router would break on Vercel → navigating directly to
+     a URL like /dashboard or /register/123 would return a 404
+     because Vercel doesn't know to serve index.html for those paths.
+
+  3. CORS was set to origin: "*" → this means ANY website on the
+     internet could make requests to the backend API, which is a
+     security risk.
+
+  4. Image uploads used local disk storage (backend/uploads/) →
+     Render (the hosting platform) has an ephemeral filesystem,
+     meaning every time the server restarts or redeploys, all
+     uploaded files are permanently deleted.
+
+  5. Environment variables were hardcoded in some places → the app
+     would not know where to find the backend once deployed.
+
+
+WHAT WAS DONE — STEP BY STEP
+-----------------------------
+
+STEP 1: Created .gitignore (root of project)
+  File: .gitignore
+  Purpose: Prevent sensitive and unnecessary files from being
+           pushed to GitHub.
+  What it excludes:
+    - node_modules/         (large, auto-generated, not needed in git)
+    - .env                  (contains secret keys — NEVER push this)
+    - dist/ and build/      (frontend build output, regenerated on deploy)
+    - backend/uploads/*     (user-uploaded images, handled by Cloudinary now)
+    - *.log files
+    - OS files (.DS_Store, Thumbs.db)
+  Special: backend/uploads/.gitkeep is still tracked so the folder
+           exists on the server when it first starts up.
+
+
+STEP 2: Created frontend/vercel.json
+  File: frontend/vercel.json
+  Purpose: Fix React Router on Vercel.
+  Content:
+    {
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+    }
+  Why needed: Vercel serves static files. When a user visits
+  /dashboard directly, Vercel looks for a file called dashboard —
+  which doesn't exist. This rule tells Vercel to always serve
+  index.html and let React Router handle the routing client-side.
+  Without this file, every page except "/" would return a 404.
+
+
+STEP 3: Fixed CORS in backend/server.js
+  File: backend/server.js
+  Before:
+    cors({ origin: "*" })   ← allows ALL websites to call your API
+
+  After:
+    const allowedOrigins = process.env.CLIENT_URL
+      ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+      : ["http://localhost:5173"];
+
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    })
+
+  How it works:
+    - Reads CLIENT_URL environment variable from .env
+    - If not set, defaults to localhost:5173 (local dev)
+    - Supports comma-separated list for multiple origins
+    - Requests with no origin (mobile apps, Render health checks,
+      curl) are still allowed through
+  What to do on Render:
+    - Set CLIENT_URL = https://your-app.vercel.app
+
+
+STEP 4: Created .env.example files
+  Files: backend/.env.example and frontend/.env.example
+  Purpose: Document what environment variables are needed without
+           exposing the actual secret values.
+  These files ARE committed to git. The real .env files are NOT.
+
+  backend/.env.example contains:
+    MONGO_URI=mongodb+srv://...
+    PORT=5000
+    JWT_SECRET=replace_with_a_long_random_secret
+    CLIENT_URL=http://localhost:5173
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_API_SECRET=your_api_secret
+
+  frontend/.env.example contains:
+    VITE_API_URL=http://localhost:5000
+
+
+STEP 5: Added VITE_API_URL to frontend
+  File: frontend/.env
+  Content: VITE_API_URL=http://localhost:5000
+  Purpose: All frontend API calls use this variable so that
+           switching from localhost to the live Render URL only
+           requires changing one value in Vercel's dashboard.
+  Used in: frontend/src/api.js as the axios baseURL.
+
+
+================================================================
+SECTION 2: HOW CLOUDINARY WAS IMPLEMENTED
+================================================================
+
+PROBLEM
+-------
+The original code used multer with disk storage:
+  - Uploaded images were saved to backend/uploads/ folder
+  - This folder lives on the server's local hard drive
+  - Render (and most cloud platforms) have ephemeral filesystems —
+    files written to disk disappear on every restart or redeploy
+  - This meant event banners would vanish every time the server
+    restarted, breaking the entire app
+
+SOLUTION
 --------
-The frontend had the backend URL hardcoded as "http://localhost:5000"
-in 5 different places. This meant that when deploying to production,
-a developer would have to manually find and update every occurrence.
+Replace local disk storage with Cloudinary — a cloud media hosting
+service. Images are uploaded directly to Cloudinary's servers and
+stored permanently there. The database stores the full Cloudinary
+URL instead of a local file path.
 
-The fix centralizes the URL into a single environment variable:
-  VITE_API_URL=http://localhost:5000
 
-Changing it once in one file now updates all 5 usages automatically.
+PACKAGES INSTALLED
+------------------
+  npm install cloudinary multer-storage-cloudinary
 
-----------------------------------------------------
-THE PROBLEM
-----------------------------------------------------
+  - cloudinary        : Official Cloudinary Node.js SDK
+  - multer-storage-cloudinary : Connects multer (file upload handler)
+                                to Cloudinary as the storage destination
 
-"http://localhost:5000" appeared hardcoded in:
 
-  1. src/api.js                    → axios baseURL
-  2. src/pages/RegisterEvent.jsx   → event image URL
-  3. src/pages/EditEvent.jsx       → event image preview URL
-  4. src/pages/LandingPage.jsx     → event banner image URL
-  5. src/pages/AdminDashboard.jsx  → event banner image URL
+FILES CREATED / CHANGED
+------------------------
 
-In a local development environment this works fine. But when the app
-is deployed (e.g. to Vercel for the frontend, Railway/Render for the
-backend), the backend URL changes to something like:
-  https://my-api.onrender.com
+1. NEW FILE: backend/config/cloudinary.js
+   Purpose: Initializes and configures the Cloudinary SDK using
+            environment variables.
+   Code:
+     const cloudinary = require("cloudinary").v2;
+     cloudinary.config({
+       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+       api_key:    process.env.CLOUDINARY_API_KEY,
+       api_secret: process.env.CLOUDINARY_API_SECRET,
+     });
+     module.exports = cloudinary;
 
-With hardcoding, ALL 5 files need manual edits before building. With
-an environment variable, only the hosting platform's config needs updating.
 
-----------------------------------------------------
-WHAT WAS CREATED
-----------------------------------------------------
+2. CHANGED: backend/middleware/uploadMiddleware.js
+   Before (disk storage):
+     const storage = multer.diskStorage({
+       destination: (req, file, cb) => { cb(null, "uploads/"); },
+       filename:    (req, file, cb) => { cb(null, uniqueName); },
+     });
 
-NEW FILE: frontend/.env
+   After (Cloudinary storage):
+     const { CloudinaryStorage } = require("multer-storage-cloudinary");
+     const cloudinary = require("../config/cloudinary");
 
-  VITE_API_URL=http://localhost:5000
+     const storage = new CloudinaryStorage({
+       cloudinary,
+       params: {
+         folder: "lhpyaya-events",       ← images go in this folder on Cloudinary
+         allowed_formats: ["jpg", "jpeg", "png", "webp"],
+         transformation: [{ quality: "auto", fetch_format: "auto" }],
+                                          ← auto-optimize quality and format
+       },
+     });
 
-Rules about .env in Vite projects:
-- The file must be named .env (or .env.local, .env.production, etc.)
-- Variables MUST be prefixed with VITE_ to be exposed to the browser
-- Variables without the VITE_ prefix are kept private (server-side only)
-- Vite reads this file at BUILD TIME and replaces all usages with the
-  actual value in the compiled output
+   Everything else (fileFilter, size limit, export) stayed the same.
 
-----------------------------------------------------
-WHAT WAS CHANGED IN EACH FILE
-----------------------------------------------------
 
-1. src/api.js
-   Before:  baseURL: "http://localhost:5000/api"
-   After:   baseURL: `${import.meta.env.VITE_API_URL}/api`
+3. CHANGED: backend/controllers/eventController.js
+   Before:
+     image: req.file ? req.file.path.replace(/\\/g, "/") : ""
 
-   This is the axios instance used for all API calls. The /api path
-   is appended after the base URL so it still works the same way.
+   After:
+     image: req.file ? req.file.path : ""
 
-2. src/pages/RegisterEvent.jsx
-   Before:  `http://localhost:5000/${res.data.image}`
-   After:   `${import.meta.env.VITE_API_URL}/${res.data.image}`
+   Why: With disk storage, req.file.path was a local file path like
+        "uploads\image.jpg" with Windows backslashes that needed fixing.
+        With Cloudinary storage, req.file.path is already a full HTTPS
+        URL like "https://res.cloudinary.com/dyrteayr3/image/upload/..."
+        so no fixing is needed. Same change applied to updateEvent too.
 
-   Used when setting the event flyer image above the registration form.
 
-3. src/pages/EditEvent.jsx
-   Before:  `http://localhost:5000/${e.image}`
-   After:   `${import.meta.env.VITE_API_URL}/${e.image}`
+4. CHANGED: backend/server.js
+   Removed:
+     const path = require("path");
+     app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-   Used when pre-filling the image preview from the existing event data.
+   Why: The /uploads static route was serving local files from disk.
+        Now that images are on Cloudinary, there are no local files to
+        serve. This line was removed to keep the code clean.
 
-4. src/pages/LandingPage.jsx
-   Before:  src={`http://localhost:5000/${event.image}`}
-   After:   src={`${import.meta.env.VITE_API_URL}/${event.image}`}
 
-   Used in the event card grid to show the event banner image.
+5. CHANGED: All frontend pages that display event images
+   Files:
+     - frontend/src/pages/LandingPage.jsx
+     - frontend/src/pages/AdminDashboard.jsx
+     - frontend/src/pages/RegisterEvent.jsx
+     - frontend/src/pages/EditEvent.jsx
 
-5. src/pages/AdminDashboard.jsx
-   Before:  src={`http://localhost:5000/${event.image}`}
-   After:   src={`${import.meta.env.VITE_API_URL}/${event.image}`}
+   Before (constructing URL from backend base + relative path):
+     src={`${import.meta.env.VITE_API_URL}/${event.image}`}
+     ← e.g. "http://localhost:5000/uploads/image.jpg"
 
-   Same as LandingPage — event card banners in the admin view.
+   After (using URL directly from database):
+     src={event.image}
+     ← e.g. "https://res.cloudinary.com/dyrteayr3/image/upload/..."
 
-----------------------------------------------------
-HOW import.meta.env WORKS IN VITE
-----------------------------------------------------
+   Why: The database now stores the full Cloudinary URL, so there is
+        no need to prepend anything. The image URL works from anywhere
+        — localhost, Render, or any device in the world.
 
-Vite uses import.meta.env (not process.env like Node.js or Create
-React App). At build time, Vite replaces every occurrence of:
-  import.meta.env.VITE_API_URL
-with the actual string value from .env. So the compiled output
-contains the literal URL, not a runtime variable lookup.
 
-This means:
-- No performance cost at runtime
-- Works in the browser (no Node.js needed)
-- Only variables prefixed with VITE_ are included in the bundle
+6. CHANGED: backend/.env (and .env.example)
+   Added three new variables:
+     CLOUDINARY_CLOUD_NAME=dyrteayr3
+     CLOUDINARY_API_KEY=293196834383469
+     CLOUDINARY_API_SECRET=NCUWjCYmtdiTi3Wqdbr5afYvNWI
 
-----------------------------------------------------
-HOW TO USE IN PRODUCTION
-----------------------------------------------------
+   These are your actual credentials from cloudinary.com/console.
+   You MUST also add these same three variables to your Render
+   environment settings — otherwise image uploads will fail in
+   production.
 
-When deploying:
-- Vercel: go to Project Settings → Environment Variables → add
-    VITE_API_URL = https://your-backend.onrender.com
-- Netlify: go to Site Settings → Environment Variables → add same
-- The frontend build will automatically use the production URL
 
-For local development, the frontend .env file stays as:
-  VITE_API_URL=http://localhost:5000
+================================================================
+SECTION 3: HOW IMAGE UPLOAD FLOW WORKS NOW
+================================================================
 
-IMPORTANT: After changing .env, restart the Vite dev server
-  (npm run dev) for the new value to take effect. Vite reads
-  .env at startup, not on every file save.
+  1. Admin selects an image file in CreateEvent or EditEvent form
+  2. Frontend sends FormData (including the image) to POST /api/events
+  3. Express receives the request and runs the multer upload middleware
+  4. multer-storage-cloudinary intercepts the file and uploads it
+     directly to Cloudinary — the image NEVER touches the server disk
+  5. Cloudinary returns a secure HTTPS URL
+  6. req.file.path = "https://res.cloudinary.com/..."
+  7. This URL is saved into MongoDB as the event's image field
+  8. When any page loads events, it receives the full URL from MongoDB
+  9. <img src={event.image} /> loads directly from Cloudinary's CDN
 
-----------------------------------------------------
-.env AND .gitignore
-----------------------------------------------------
 
-.env files often contain secrets (API keys, passwords). It is best
-practice to add .env to .gitignore so it is not pushed to GitHub.
-For this project the .env only contains the backend URL (not a secret),
-but the convention should still be followed.
+================================================================
+SECTION 4: DEPLOYMENT CHECKLIST
+================================================================
 
-If .env is gitignored, create a .env.example file with placeholder
-values so other developers know what variables are needed:
-  VITE_API_URL=http://localhost:5000
+BEFORE DEPLOYING:
+  [ ] Push all code to GitHub (git add . → git commit → git push)
+  [ ] Make sure .env is in .gitignore (never push real secrets)
 
-====================================================
+RENDER (Backend):
+  [ ] Connect GitHub repo
+  [ ] Root Directory: backend
+  [ ] Build Command:  npm install
+  [ ] Start Command:  node server.js
+  [ ] Add environment variables:
+        MONGO_URI              = (your MongoDB Atlas connection string)
+        JWT_SECRET             = (your secret key)
+        CLOUDINARY_CLOUD_NAME  = dyrteayr3
+        CLOUDINARY_API_KEY     = 293196834383469
+        CLOUDINARY_API_SECRET  = NCUWjCYmtdiTi3Wqdbr5afYvNWI
+        CLIENT_URL             = (set AFTER Vercel deploy — your Vercel URL)
+  [ ] Deploy → copy the Render URL (e.g. https://lhpyaya-api.onrender.com)
+  [ ] Whitelist 0.0.0.0/0 in MongoDB Atlas Network Access for Render
+
+VERCEL (Frontend):
+  [ ] Connect GitHub repo
+  [ ] Root Directory: frontend
+  [ ] Build Command:  npm run build
+  [ ] Output Dir:     dist
+  [ ] Add environment variable:
+        VITE_API_URL = https://lhpyaya-api.onrender.com  (your Render URL)
+  [ ] Deploy → copy the Vercel URL (e.g. https://lhpyaya.vercel.app)
+
+AFTER BOTH ARE DEPLOYED:
+  [ ] Go back to Render → set CLIENT_URL = https://lhpyaya.vercel.app
+  [ ] Redeploy backend on Render
+  [ ] Test: register for an event, upload a banner image, check it
+      persists after a few minutes (Cloudinary = permanent)
+
+
+================================================================
+END OF NOTES
+================================================================

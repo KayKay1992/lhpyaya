@@ -34,8 +34,7 @@ const RegisterEvent = () => {
       api
         .get(`/events/${eventId}`)
         .then((res) => {
-          if (res.data.image)
-            setEventImage(`${import.meta.env.VITE_API_URL}/${res.data.image}`);
+          if (res.data.image) setEventImage(res.data.image);
           setEventDetails({
             date: res.data.date,
             time: res.data.time,
@@ -84,7 +83,7 @@ const RegisterEvent = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-orange-50 via-white to-amber-50 px-4">
         <div className="bg-white rounded-3xl shadow-xl border border-orange-100 p-10 max-w-md w-full text-center">
           <div className="flex items-center justify-center mb-5">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
@@ -137,7 +136,7 @@ const RegisterEvent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50">
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-orange-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

@@ -138,12 +138,12 @@ const AdminDashboard = () => {
               >
                 {event.image ? (
                   <img
-                    src={`${import.meta.env.VITE_API_URL}/${event.image}`}
+                    src={event.image}
                     alt={event.title}
                     className="w-full h-40 object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                  <div className="w-full h-40 bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center">
                     <CalendarDays
                       size={36}
                       className="text-[#ff9324] opacity-50"

@@ -30,6 +30,11 @@ connectDB();
 // parse requests of content-type - application/json
 app.use(express.json());
 
+// health check
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", message: "LHP-YAYA API is running" });
+});
+
 // routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/events", require("./routes/eventRoutes"));

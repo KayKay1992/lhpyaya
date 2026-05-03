@@ -21,3 +21,5 @@ Thumbs.db
 # Uploads (user-uploaded images — not tracked in git)
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+.env

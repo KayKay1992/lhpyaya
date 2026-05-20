@@ -12,6 +12,7 @@ import {
   Trash2,
   Users,
   LogOut,
+  Award,
 } from "lucide-react";
 import rccgLogo from "../assets/download (1).jpg";
 import yayaLogo from "../assets/yaya.png";
@@ -115,6 +116,12 @@ const AdminDashboard = () => {
             className="flex items-center gap-2 bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-md shadow-orange-200"
           >
             <Plus size={16} /> Create Event
+          </button>
+          <button
+            onClick={() => navigate("/admin/certificates")}
+            className="flex items-center gap-2 bg-white hover:bg-orange-50 active:scale-95 text-[#ff9324] text-sm font-bold px-5 py-2.5 rounded-xl transition border border-orange-200"
+          >
+            <Award size={16} /> Certificates
           </button>
         </div>
 

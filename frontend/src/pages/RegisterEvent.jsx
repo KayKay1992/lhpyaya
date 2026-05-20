@@ -102,10 +102,30 @@ const RegisterEvent = () => {
             . See you there!
           </p>
 
+          {/* Certificate prompt */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4 text-left">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-gray-900">
+                Do You Need a Certificate of Participation?
+              </span>{" "}
+              If yes,{" "}
+              <button
+                onClick={() =>
+                  navigate(
+                    `/certificate-payment?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
+                  )
+                }
+                className="text-primary font-bold underline underline-offset-2 hover:text-orange-600 transition"
+              >
+                Click Here!
+              </button>
+            </p>
+          </div>
+
           {eventDetails && (
             <div className="bg-orange-50 border border-orange-100 rounded-2xl px-5 py-4 mb-6 text-left space-y-2.5">
               <div className="flex items-center gap-2.5 text-sm text-gray-700">
-                <CalendarDays size={15} className="text-[#ff9324] shrink-0" />
+                <CalendarDays size={15} className="text-primary shrink-0" />
                 <span>
                   {new Date(eventDetails.date).toLocaleDateString("en-US", {
                     weekday: "long",
@@ -116,11 +136,11 @@ const RegisterEvent = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2.5 text-sm text-gray-700">
-                <Clock size={15} className="text-[#ff9324] shrink-0" />
+                <Clock size={15} className="text-primary shrink-0" />
                 <span>{eventDetails.time}</span>
               </div>
               <div className="flex items-center gap-2.5 text-sm text-gray-700">
-                <MapPin size={15} className="text-[#ff9324] shrink-0" />
+                <MapPin size={15} className="text-primary shrink-0" />
                 <span>{eventDetails.location}</span>
               </div>
             </div>
@@ -184,7 +204,7 @@ const RegisterEvent = () => {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              className="flex items-center gap-2 border border-[#ff9324] text-[#ff9324] text-sm font-semibold px-4 py-2 rounded-xl hover:bg-orange-50 transition"
+              className="flex items-center gap-2 border border-[#ff9324] text-primary text-sm font-semibold px-4 py-2 rounded-xl hover:bg-orange-50 transition"
             >
               <LogIn size={15} /> Sign In
             </button>
@@ -197,7 +217,7 @@ const RegisterEvent = () => {
           {/* Back */}
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#ff9324] mb-6 transition"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary mb-6 transition"
           >
             <ArrowLeft size={15} /> Back to Events
           </Link>
@@ -216,7 +236,7 @@ const RegisterEvent = () => {
           {/* Event Description */}
           {eventDetails?.description && (
             <div className="bg-white rounded-2xl border border-orange-100 shadow-sm px-6 py-4 mb-6">
-              <h2 className="text-sm font-semibold text-[#ff9324] uppercase tracking-wide mb-2">
+              <h2 className="text-sm font-semibold text-primary uppercase tracking-wide mb-2">
                 About this Event
               </h2>
               <p className="text-sm text-gray-600 leading-relaxed">
@@ -233,7 +253,7 @@ const RegisterEvent = () => {
             <h1 className="text-2xl font-bold text-gray-900">
               Register for Event
             </h1>
-            <p className="text-[#ff9324] font-semibold text-sm mt-1">
+            <p className="text-primary font-semibold text-sm mt-1">
               {decodeURIComponent(eventTitle)}
             </p>
           </div>

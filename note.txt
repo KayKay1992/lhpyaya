@@ -1,311 +1,131 @@
-================================================================
-  LHP-YAYA PROJECT — DEPLOYMENT SETUP & CLOUDINARY SETUP NOTES
-================================================================
-Written: May 2, 2026
-Project: Full-stack event registration app
-Stack:   React 19 + Vite (frontend) | Express.js + MongoDB Atlas (backend)
-Deploy:  Frontend → Vercel | Backend → Render
+====================================================================
+  CERTIFICATE OF PARTICIPATION FEATURE — IMPLEMENTATION NOTES
+  Date: May 20, 2026
+====================================================================
 
-
-================================================================
-SECTION 1: HOW THE PROJECT WAS PREPARED FOR DEPLOYMENT
-================================================================
-
-PROBLEM BEFORE PREPARATION
----------------------------
-The project was only set up to run locally. Several things would
-break when deployed to real servers:
-
-  1. No .gitignore → node_modules, .env secrets, and local uploads
-     would all be pushed to GitHub accidentally.
-
-  2. React Router would break on Vercel → navigating directly to
-     a URL like /dashboard or /register/123 would return a 404
-     because Vercel doesn't know to serve index.html for those paths.
-
-  3. CORS was set to origin: "*" → this means ANY website on the
-     internet could make requests to the backend API, which is a
-     security risk.
-
-  4. Image uploads used local disk storage (backend/uploads/) →
-     Render (the hosting platform) has an ephemeral filesystem,
-     meaning every time the server restarts or redeploys, all
-     uploaded files are permanently deleted.
-
-  5. Environment variables were hardcoded in some places → the app
-     would not know where to find the backend once deployed.
-
-
-WHAT WAS DONE — STEP BY STEP
------------------------------
-
-STEP 1: Created .gitignore (root of project)
-  File: .gitignore
-  Purpose: Prevent sensitive and unnecessary files from being
-           pushed to GitHub.
-  What it excludes:
-    - node_modules/         (large, auto-generated, not needed in git)
-    - .env                  (contains secret keys — NEVER push this)
-    - dist/ and build/      (frontend build output, regenerated on deploy)
-    - backend/uploads/*     (user-uploaded images, handled by Cloudinary now)
-    - *.log files
-    - OS files (.DS_Store, Thumbs.db)
-  Special: backend/uploads/.gitkeep is still tracked so the folder
-           exists on the server when it first starts up.
-
-
-STEP 2: Created frontend/vercel.json
-  File: frontend/vercel.json
-  Purpose: Fix React Router on Vercel.
-  Content:
-    {
-      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-    }
-  Why needed: Vercel serves static files. When a user visits
-  /dashboard directly, Vercel looks for a file called dashboard —
-  which doesn't exist. This rule tells Vercel to always serve
-  index.html and let React Router handle the routing client-side.
-  Without this file, every page except "/" would return a 404.
-
-
-STEP 3: Fixed CORS in backend/server.js
-  File: backend/server.js
-  Before:
-    cors({ origin: "*" })   ← allows ALL websites to call your API
-
-  After:
-    const allowedOrigins = process.env.CLIENT_URL
-      ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
-      : ["http://localhost:5173"];
-
-    cors({
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, true);
-        callback(new Error(`CORS: origin ${origin} not allowed`));
-      }
-    })
-
-  How it works:
-    - Reads CLIENT_URL environment variable from .env
-    - If not set, defaults to localhost:5173 (local dev)
-    - Supports comma-separated list for multiple origins
-    - Requests with no origin (mobile apps, Render health checks,
-      curl) are still allowed through
-  What to do on Render:
-    - Set CLIENT_URL = https://your-app.vercel.app
-
-
-STEP 4: Created .env.example files
-  Files: backend/.env.example and frontend/.env.example
-  Purpose: Document what environment variables are needed without
-           exposing the actual secret values.
-  These files ARE committed to git. The real .env files are NOT.
-
-  backend/.env.example contains:
-    MONGO_URI=mongodb+srv://...
-    PORT=5000
-    JWT_SECRET=replace_with_a_long_random_secret
-    CLIENT_URL=http://localhost:5173
-    CLOUDINARY_CLOUD_NAME=your_cloud_name
-    CLOUDINARY_API_KEY=your_api_key
-    CLOUDINARY_API_SECRET=your_api_secret
-
-  frontend/.env.example contains:
-    VITE_API_URL=http://localhost:5000
-
-
-STEP 5: Added VITE_API_URL to frontend
-  File: frontend/.env
-  Content: VITE_API_URL=http://localhost:5000
-  Purpose: All frontend API calls use this variable so that
-           switching from localhost to the live Render URL only
-           requires changing one value in Vercel's dashboard.
-  Used in: frontend/src/api.js as the axios baseURL.
-
-
-================================================================
-SECTION 2: HOW CLOUDINARY WAS IMPLEMENTED
-================================================================
-
-PROBLEM
--------
-The original code used multer with disk storage:
-  - Uploaded images were saved to backend/uploads/ folder
-  - This folder lives on the server's local hard drive
-  - Render (and most cloud platforms) have ephemeral filesystems —
-    files written to disk disappear on every restart or redeploy
-  - This meant event banners would vanish every time the server
-    restarted, breaking the entire app
-
-SOLUTION
+OVERVIEW
 --------
-Replace local disk storage with Cloudinary — a cloud media hosting
-service. Images are uploaded directly to Cloudinary's servers and
-stored permanently there. The database stores the full Cloudinary
-URL instead of a local file path.
+A full Certificate of Participation flow was added to the LHP-YAYA
+app, covering the participant-facing payment page, the success screen
+prompt, and an admin management page. Both frontend and backend were
+updated.
 
+====================================================================
+BACKEND CHANGES
+====================================================================
 
-PACKAGES INSTALLED
-------------------
-  npm install cloudinary multer-storage-cloudinary
+1. NEW FILE: backend/models/CertificateRequest.js
+   - Mongoose model that stores one certificate request per participant.
+   - Fields:
+       • event        — ref to Event model (ObjectId)
+       • participantName — the participant's real/registered name
+       • certificateName — exactly how they want the name on the cert
+       • email        — participant's email
+       • paymentEvidence — Cloudinary URL of the uploaded proof of payment
+       • status       — "pending" | "approved" | "rejected" (default: pending)
+   - Timestamps (createdAt, updatedAt) are auto-added.
 
-  - cloudinary        : Official Cloudinary Node.js SDK
-  - multer-storage-cloudinary : Connects multer (file upload handler)
-                                to Cloudinary as the storage destination
+2. NEW FILE: backend/middleware/certificateUploadMiddleware.js
+   - Separate Multer + Cloudinary storage config for payment evidence.
+   - Saves files to the "lhpyaya-payment-evidence" folder on Cloudinary.
+   - Accepts: JPG, PNG, WEBP images and PDF files.
+   - File size limit: 10 MB.
 
+3. NEW FILE: backend/controllers/certificateController.js
+   - submitRequest  (POST /api/certificates) — PUBLIC
+       • Validates all required fields and email format.
+       • Requires a file upload (paymentEvidence).
+       • Saves a new CertificateRequest document to the database.
+   - getAllRequests (GET  /api/certificates) — ADMIN ONLY
+       • Returns all certificate requests sorted newest first.
+       • Populates event title and date for display.
 
-FILES CREATED / CHANGED
-------------------------
+4. NEW FILE: backend/routes/certificateRoutes.js
+   - POST /   → certificateUpload.single("paymentEvidence") → submitRequest
+   - GET  /   → protect → adminOnly → getAllRequests
 
-1. NEW FILE: backend/config/cloudinary.js
-   Purpose: Initializes and configures the Cloudinary SDK using
-            environment variables.
-   Code:
-     const cloudinary = require("cloudinary").v2;
-     cloudinary.config({
-       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-       api_key:    process.env.CLOUDINARY_API_KEY,
-       api_secret: process.env.CLOUDINARY_API_SECRET,
-     });
-     module.exports = cloudinary;
+5. UPDATED: backend/server.js
+   - Registered the new route:
+       app.use("/api/certificates", require("./routes/certificateRoutes"))
 
+====================================================================
+FRONTEND CHANGES
+====================================================================
 
-2. CHANGED: backend/middleware/uploadMiddleware.js
-   Before (disk storage):
-     const storage = multer.diskStorage({
-       destination: (req, file, cb) => { cb(null, "uploads/"); },
-       filename:    (req, file, cb) => { cb(null, uniqueName); },
-     });
+6. NEW FILE: frontend/src/pages/CertificatePayment.jsx
+   - A public page accessible at /certificate-payment?eventId=...&title=...&name=...
+   - PAYMENT DETAILS CARD (read-only display):
+       • Amount:          ₦2,000
+       • Account Name:    RCCG GLORIOUS YOUTH FELLOWSHIP
+       • Bank:            FIDELITY BANK
+       • Account Number:  5210040973  (with a one-click copy button)
+   - FORM (participant fills in):
+       • Full Name (as registered) — pre-filled from query param if available
+       • Name to Appear on Certificate — printed exactly as entered
+       • Email Address
+       • Upload Proof of Payment — accepts image (JPG/PNG/WEBP) or PDF,
+         shows image preview or PDF filename before submitting
+   - On submit, sends a multipart/form-data POST to /api/certificates.
+   - On success, shows a confirmation screen.
 
-   After (Cloudinary storage):
-     const { CloudinaryStorage } = require("multer-storage-cloudinary");
-     const cloudinary = require("../config/cloudinary");
+7. UPDATED: frontend/src/pages/RegisterEvent.jsx
+   - On the SUCCESS screen (after a participant registers for an event),
+     a new amber-highlighted prompt is shown ABOVE the "Back to Events" button:
 
-     const storage = new CloudinaryStorage({
-       cloudinary,
-       params: {
-         folder: "lhpyaya-events",       ← images go in this folder on Cloudinary
-         allowed_formats: ["jpg", "jpeg", "png", "webp"],
-         transformation: [{ quality: "auto", fetch_format: "auto" }],
-                                          ← auto-optimize quality and format
-       },
-     });
+       "Do You Need a Certificate of Participation?
+        If yes, Click Here!"
 
-   Everything else (fileFilter, size limit, export) stayed the same.
+   - Clicking "Click Here!" navigates to /certificate-payment with
+     eventId, title, and the participant's name pre-filled in the URL.
 
+8. NEW FILE: frontend/src/pages/AdminCertificates.jsx
+   - A protected admin page at /admin/certificates.
+   - Fetches all certificate requests from GET /api/certificates.
+   - Displays a searchable table with columns:
+       • Participant Name (with submission date)
+       • Name on Certificate (highlighted in orange — this is what gets printed)
+       • Event name
+       • Email
+       • Action buttons (per row):
+           ─ View Receipt      → opens the uploaded payment evidence in a new tab
+           ─ Generate Certificate → opens a new browser window with a fully styled
+                                    printable certificate and auto-triggers the
+                                    browser's print dialog
+   - Search bar filters by participant name, certificate name, email, or event title.
+   - GENERATE CERTIFICATE logic:
+       • Builds an HTML page in memory with a decorated certificate layout.
+       • Uses Google Fonts (Playfair Display + Open Sans).
+       • Fills in the certificate name, event title, event date, and issue date.
+       • Includes corner decorations, a signature block, and RCCG branding.
+       • Opens in a new tab and auto-prints.
 
-3. CHANGED: backend/controllers/eventController.js
-   Before:
-     image: req.file ? req.file.path.replace(/\\/g, "/") : ""
+9. UPDATED: frontend/src/App.jsx
+   - Added two new routes:
+       • /certificate-payment          → <CertificatePayment />  (public)
+       • /admin/certificates           → <AdminCertificates />   (protected)
 
-   After:
-     image: req.file ? req.file.path : ""
+10. UPDATED: frontend/src/pages/AdminDashboard.jsx
+    - Added an "Certificates" button (with Award icon) next to "Create Event"
+      in the dashboard header. Navigates to /admin/certificates.
 
-   Why: With disk storage, req.file.path was a local file path like
-        "uploads\image.jpg" with Windows backslashes that needed fixing.
-        With Cloudinary storage, req.file.path is already a full HTTPS
-        URL like "https://res.cloudinary.com/dyrteayr3/image/upload/..."
-        so no fixing is needed. Same change applied to updateEvent too.
+====================================================================
+HOW THE FLOW WORKS END-TO-END
+====================================================================
 
+PARTICIPANT SIDE:
+  1. Participant registers for an event → sees the success screen.
+  2. Sees the certificate prompt → clicks "Click Here!".
+  3. Lands on /certificate-payment with their name pre-filled.
+  4. Reads the payment details, makes a bank transfer of ₦2,000.
+  5. Fills in their certificate name and email, uploads payment screenshot.
+  6. Submits → sees confirmation screen.
 
-4. CHANGED: backend/server.js
-   Removed:
-     const path = require("path");
-     app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+ADMIN SIDE:
+  1. Admin logs in → clicks "Certificates" on the dashboard.
+  2. Sees a table of all participants who requested a certificate.
+  3. For each entry:
+       – Clicks "View Receipt" to verify the payment evidence.
+       – Clicks "Generate Certificate" to produce and print the certificate
+         with the participant's preferred name.
 
-   Why: The /uploads static route was serving local files from disk.
-        Now that images are on Cloudinary, there are no local files to
-        serve. This line was removed to keep the code clean.
-
-
-5. CHANGED: All frontend pages that display event images
-   Files:
-     - frontend/src/pages/LandingPage.jsx
-     - frontend/src/pages/AdminDashboard.jsx
-     - frontend/src/pages/RegisterEvent.jsx
-     - frontend/src/pages/EditEvent.jsx
-
-   Before (constructing URL from backend base + relative path):
-     src={`${import.meta.env.VITE_API_URL}/${event.image}`}
-     ← e.g. "http://localhost:5000/uploads/image.jpg"
-
-   After (using URL directly from database):
-     src={event.image}
-     ← e.g. "https://res.cloudinary.com/dyrteayr3/image/upload/..."
-
-   Why: The database now stores the full Cloudinary URL, so there is
-        no need to prepend anything. The image URL works from anywhere
-        — localhost, Render, or any device in the world.
-
-
-6. CHANGED: backend/.env (and .env.example)
-   Added three new variables:
-     CLOUDINARY_CLOUD_NAME=dyrteayr3
-     CLOUDINARY_API_KEY=293196834383469
-     CLOUDINARY_API_SECRET=NCUWjCYmtdiTi3Wqdbr5afYvNWI
-
-   These are your actual credentials from cloudinary.com/console.
-   You MUST also add these same three variables to your Render
-   environment settings — otherwise image uploads will fail in
-   production.
-
-
-================================================================
-SECTION 3: HOW IMAGE UPLOAD FLOW WORKS NOW
-================================================================
-
-  1. Admin selects an image file in CreateEvent or EditEvent form
-  2. Frontend sends FormData (including the image) to POST /api/events
-  3. Express receives the request and runs the multer upload middleware
-  4. multer-storage-cloudinary intercepts the file and uploads it
-     directly to Cloudinary — the image NEVER touches the server disk
-  5. Cloudinary returns a secure HTTPS URL
-  6. req.file.path = "https://res.cloudinary.com/..."
-  7. This URL is saved into MongoDB as the event's image field
-  8. When any page loads events, it receives the full URL from MongoDB
-  9. <img src={event.image} /> loads directly from Cloudinary's CDN
-
-
-================================================================
-SECTION 4: DEPLOYMENT CHECKLIST
-================================================================
-
-BEFORE DEPLOYING:
-  [ ] Push all code to GitHub (git add . → git commit → git push)
-  [ ] Make sure .env is in .gitignore (never push real secrets)
-
-RENDER (Backend):
-  [ ] Connect GitHub repo
-  [ ] Root Directory: backend
-  [ ] Build Command:  npm install
-  [ ] Start Command:  node server.js
-  [ ] Add environment variables:
-        MONGO_URI              = (your MongoDB Atlas connection string)
-        JWT_SECRET             = (your secret key)
-        CLOUDINARY_CLOUD_NAME  = dyrteayr3
-        CLOUDINARY_API_KEY     = 293196834383469
-        CLOUDINARY_API_SECRET  = NCUWjCYmtdiTi3Wqdbr5afYvNWI
-        CLIENT_URL             = (set AFTER Vercel deploy — your Vercel URL)
-  [ ] Deploy → copy the Render URL (e.g. https://lhpyaya-api.onrender.com)
-  [ ] Whitelist 0.0.0.0/0 in MongoDB Atlas Network Access for Render
-
-VERCEL (Frontend):
-  [ ] Connect GitHub repo
-  [ ] Root Directory: frontend
-  [ ] Build Command:  npm run build
-  [ ] Output Dir:     dist
-  [ ] Add environment variable:
-        VITE_API_URL = https://lhpyaya-api.onrender.com  (your Render URL)
-  [ ] Deploy → copy the Vercel URL (e.g. https://lhpyaya.vercel.app)
-
-AFTER BOTH ARE DEPLOYED:
-  [ ] Go back to Render → set CLIENT_URL = https://lhpyaya.vercel.app
-  [ ] Redeploy backend on Render
-  [ ] Test: register for an event, upload a banner image, check it
-      persists after a few minutes (Cloudinary = permanent)
-
-
-================================================================
-END OF NOTES
-================================================================
+====================================================================

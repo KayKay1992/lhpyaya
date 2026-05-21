@@ -16,6 +16,7 @@ import {
   Circle,
   Search,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 
 const ViewRegistered = () => {
@@ -150,9 +151,14 @@ const ViewRegistered = () => {
               </p>
             </div>
             {!loading && (
-              <span className="ml-auto bg-orange-100 text-[#ff9324] text-sm font-bold px-3 py-1 rounded-full">
-                {registrants.length} registered
-              </span>
+              <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+                <span className="bg-orange-100 text-[#ff9324] text-sm font-bold px-3 py-1 rounded-full">
+                  {registrants.length} registered
+                </span>
+                <span className="bg-green-100 text-green-600 text-sm font-bold px-3 py-1 rounded-full">
+                  {registrants.filter((r) => r.attended).length} attended
+                </span>
+              </div>
             )}
           </div>
 
@@ -187,7 +193,7 @@ const ViewRegistered = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {/* Table Header */}
-              <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px] gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <span className="flex items-center gap-1.5">
                   <User size={12} /> Name
                 </span>
@@ -198,6 +204,9 @@ const ViewRegistered = () => {
                   <Phone size={12} /> Phone
                 </span>
                 <span>Registered</span>
+                <span className="flex items-center gap-1.5">
+                  <MessageSquare size={12} /> Referral
+                </span>
                 <span>Attended</span>
                 <span></span>
               </div>
@@ -229,7 +238,7 @@ const ViewRegistered = () => {
                     }`}
                   >
                     {/* Desktop row */}
-                    <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
+                    <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
                       <span className="font-medium truncate">{r.name}</span>
                       <span className="text-gray-500 truncate">{r.email}</span>
                       <span className="text-gray-500 truncate">
@@ -241,6 +250,9 @@ const ViewRegistered = () => {
                           day: "numeric",
                           year: "numeric",
                         })}
+                      </span>
+                      <span className="text-gray-500 text-xs truncate">
+                        {r.referral || <span className="text-gray-300">—</span>}
                       </span>
                       <div>
                         <button

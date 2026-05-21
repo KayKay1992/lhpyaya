@@ -27,6 +27,11 @@ const registrationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    referral: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true },
 );

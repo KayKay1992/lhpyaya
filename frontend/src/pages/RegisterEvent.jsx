@@ -11,13 +11,20 @@ import {
   LayoutDashboard,
   Clock,
   MapPin,
+  Award,
+  Mic2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import rccgLogo from "../assets/download (1).jpg";
 import yayaLogo from "../assets/yaya.png";
 
 const RegisterEvent = () => {
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    referral: "",
+  });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [eventImage, setEventImage] = useState(null);
@@ -102,47 +109,6 @@ const RegisterEvent = () => {
             . See you there!
           </p>
 
-          {/* Certificate prompt */}
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4 text-left">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-gray-900">
-                Do You Need a Certificate of Participation?
-              </span>{" "}
-              If yes,{" "}
-              <button
-                onClick={() =>
-                  navigate(
-                    `/certificate-payment?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
-                  )
-                }
-                className="text-primary font-bold underline underline-offset-2 hover:text-orange-600 transition"
-              >
-                Click Here!
-              </button>
-            </p>
-          </div>
-
-          {/* Speaker booking prompt */}
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 mb-4 text-left">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-gray-900">
-                Do you want to book a one-on-one session with one of our Keynote
-                Speakers — The CEO of Pioneer Airline?
-              </span>{" "}
-              If Yes,{" "}
-              <button
-                onClick={() =>
-                  navigate(
-                    `/speaker-booking?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
-                  )
-                }
-                className="text-blue-600 font-bold underline underline-offset-2 hover:text-blue-800 transition"
-              >
-                Click Here!
-              </button>
-            </p>
-          </div>
-
           {eventDetails && (
             <div className="bg-orange-50 border border-orange-100 rounded-2xl px-5 py-4 mb-6 text-left space-y-2.5">
               <div className="flex items-center gap-2.5 text-sm text-gray-700">
@@ -166,6 +132,59 @@ const RegisterEvent = () => {
               </div>
             </div>
           )}
+
+          {/* Certificate prompt */}
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 mb-4 text-left shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
+                <Award size={18} className="text-white" />
+              </div>
+              <p className="font-bold text-gray-900 text-sm leading-snug">
+                Do You Need a Certificate of Participation?
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 pl-12">
+              Get an official certificate to recognise your attendance at this
+              event.
+            </p>
+            <button
+              onClick={() =>
+                navigate(
+                  `/certificate-payment?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
+                )
+              }
+              className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
+            >
+              Yes, Get My Certificate →
+            </button>
+          </div>
+
+          {/* Speaker booking prompt */}
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-5 mb-6 text-left shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+                <Mic2 size={18} className="text-white" />
+              </div>
+              <p className="font-bold text-gray-900 text-sm leading-snug">
+                Book a One-on-One with Our Keynote Speaker!
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 pl-12">
+              Meet personally with the CEO of Pioneer Airline — a rare
+              opportunity you don’t want to miss.
+            </p>
+            <button
+              onClick={() =>
+                navigate(
+                  `/speaker-booking?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
+                )
+              }
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
+            >
+              Yes, Book My Session →
+            </button>
+          </div>
+
           <button
             onClick={() => navigate("/")}
             className="w-full bg-[#ff9324] hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-md shadow-orange-200"
@@ -322,6 +341,20 @@ const RegisterEvent = () => {
                   onChange={handleChange}
                   required
                   placeholder="+1 234 567 8900"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Who told you about this event?
+                </label>
+                <input
+                  type="text"
+                  name="referral"
+                  value={form.referral}
+                  onChange={handleChange}
+                  placeholder="e.g. A friend, Social media, Poster, Church announcement..."
                   className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
                 />
               </div>

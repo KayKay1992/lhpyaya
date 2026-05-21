@@ -5,7 +5,7 @@ const Event = require("../models/Event");
 // @route   POST /api/registrations/:eventId
 // @access  Public
 const registerForEvent = async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, referral } = req.body;
 
   if (!name || !email) {
     return res
@@ -34,6 +34,7 @@ const registerForEvent = async (req, res) => {
       name,
       email,
       phone: phone || "",
+      referral: referral || "",
     });
 
     res.status(201).json({ message: "Registration successful", registration });

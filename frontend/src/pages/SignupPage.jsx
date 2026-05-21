@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
@@ -180,7 +181,11 @@ const SignupPage = () => {
               disabled={loading}
               className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
             >
-              {loading ? "Creating account..." : "Create Account"}
+              {loading ? (
+                <ButtonSpinner label="Creating account…" />
+              ) : (
+                "Create Account"
+              )}
             </button>
           </form>
         </div>

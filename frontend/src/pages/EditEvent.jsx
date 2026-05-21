@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { PageSpinner, ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
 import { ArrowLeft, CalendarDays, ImagePlus, LogOut } from "lucide-react";
@@ -70,12 +71,7 @@ const EditEvent = () => {
     }
   };
 
-  if (fetching)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">
-        Loading event...
-      </div>
-    );
+  if (fetching) return <PageSpinner label="Loading event…" />;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50">
@@ -249,7 +245,7 @@ const EditEvent = () => {
                 disabled={loading}
                 className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? <ButtonSpinner label="Saving…" /> : "Save Changes"}
               </button>
             </form>
           </div>

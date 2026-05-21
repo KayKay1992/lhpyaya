@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
 import {
@@ -364,7 +365,11 @@ const RegisterEvent = () => {
                 disabled={loading}
                 className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
               >
-                {loading ? "Submitting..." : "Confirm Registration"}
+                {loading ? (
+                  <ButtonSpinner label="Submitting…" />
+                ) : (
+                  "Confirm Registration"
+                )}
               </button>
 
               {/* Add-ons prompt */}

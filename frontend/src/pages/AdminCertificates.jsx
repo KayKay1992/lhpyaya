@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SectionSpinner } from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../api";
 import toast from "react-hot-toast";
@@ -264,9 +265,7 @@ const AdminCertificates = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-400 text-sm">
-            Loading...
-          </div>
+          <SectionSpinner label="Loading certificates…" />
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <Award size={48} className="text-orange-200 mx-auto mb-4" />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
 import {
@@ -345,7 +346,11 @@ const CertificatePayment = () => {
             disabled={loading}
             className="w-full bg-primary hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-md shadow-orange-200 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? "Submitting..." : "Submit Certificate Request"}
+            {loading ? (
+              <ButtonSpinner label="Submitting…" />
+            ) : (
+              "Submit Certificate Request"
+            )}
           </button>
         </form>
       </div>

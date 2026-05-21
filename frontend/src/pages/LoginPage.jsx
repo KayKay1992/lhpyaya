@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { ButtonSpinner } from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../api";
 import toast from "react-hot-toast";
@@ -100,7 +101,7 @@ const LoginPage = () => {
               disabled={loading}
               className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? <ButtonSpinner label="Signing in…" /> : "Sign In"}
             </button>
           </form>
         </div>

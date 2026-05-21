@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SectionSpinner } from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../api";
 import {
@@ -110,9 +111,7 @@ const LandingPage = () => {
       {/* Events Grid */}
       <section className="px-6 pb-16 max-w-6xl mx-auto">
         {loading ? (
-          <div className="text-center py-20 text-gray-400 text-sm">
-            Loading events...
-          </div>
+          <SectionSpinner label="Loading events…" />
         ) : events.length === 0 ? (
           <div className="text-center py-20">
             <CalendarDays size={48} className="text-orange-200 mx-auto mb-4" />

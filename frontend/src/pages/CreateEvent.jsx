@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
 import { ArrowLeft, CalendarDays, ImagePlus, LogOut } from "lucide-react";
@@ -228,7 +229,7 @@ const CreateEvent = () => {
                 disabled={loading}
                 className="w-full bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60 mt-2"
               >
-                {loading ? "Creating..." : "Create Event"}
+                {loading ? <ButtonSpinner label="Creating…" /> : "Create Event"}
               </button>
             </form>
           </div>

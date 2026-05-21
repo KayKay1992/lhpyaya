@@ -1,95 +1,99 @@
 ===================================================
-FEATURE: Hover Tooltips on Admin Registrant Table
-===================================================
-
-How it was done:
------------------
-The ViewRegistered.jsx page shows a table of registered participants.
-On narrow screens, cells are truncated with Tailwind's `truncate` class,
-meaning long emails or phone numbers are cut off with "...".
-
-To let the admin see the full value without extra popups or libraries,
-we added the native HTML `title` attribute to every `<span>` that holds
-a truncatable value. When you hover over a cell, the browser automatically
-shows the full text in a small tooltip bubble — no JavaScript or extra
-component needed.
-
-Files changed:
-- frontend/src/pages/ViewRegistered.jsx
-
-Cells updated (both desktop grid and mobile grid):
-  - Name     → title={r.name}
-  - Email    → title={r.email}
-  - Phone    → title={r.phone || undefined}   (undefined hides empty tooltip)
-  - Referral → title={r.referral || undefined}
-
-Using `|| undefined` on optional fields means the tooltip only appears
-when the cell actually has a value — no blank tooltip box on empty cells.
-
-===================================================
-FEATURE: Event Add-Ons Page + Registration Form Link
+FEATURE: Beautiful Loading Spinners Across All Pages
 ===================================================
 
 User request:
-  Add a link/button on the registration page (after the Register button)
-  that says "Do you want a certificate of participation or speak with our
-  keynote speaker one on one? Click here." This should open a new page
-  where the participant can book the speaker session and/or pay for a
-  certificate — just like the prompts on the success screen.
+  Replace all plain "Loading..." / "Submitting..." text with a beautiful
+  spinner on a modern background — applied to every page in the app.
 
-How it was done:
------------------
+---
 
-1. New page — frontend/src/pages/EventAddons.jsx
-   A standalone public page at the route /event-extras.
-   It reads three query parameters from the URL:
-     - eventId   (passed from the registration form)
-     - title     (the event name, URL-encoded)
-     - name      (the participant's name, pre-fills destination forms)
+HOW IT WAS IMPLEMENTED
+-----------------------
 
-   The page shows two bold, coloured action cards side by side:
+STEP 1 — Created a single reusable component file
+  File: frontend/src/components/Spinner.jsx
 
-   CERTIFICATE CARD (amber theme):
-   - Icon: Award (lucide-react), amber badge
-   - Shows the fee: ₦2,000
-   - Button navigates to /certificate-payment with the same query params
-   - Participant then sees payment details, fills certificate name, uploads evidence
+  Three named exports were created in this one file so any page can
+  import only what it needs:
 
-   SPEAKER BOOKING CARD (blue theme):
-   - Icon: Mic2 (lucide-react), blue badge
-   - Shows the fee: ₦20,000
-   - Button navigates to /speaker-booking with the same query params
-   - Participant fills phone, uploads payment evidence
+  1. PageSpinner  — for when an ENTIRE page is loading
+     - Renders a full-screen div with the same orange-50 gradient
+       background used across the app (bg-linear-to-br from-orange-50
+       via-white to-amber-50).
+     - Contains an 80px ring made of two layered border divs:
+         • Outer static ring: border-orange-100 (the "track")
+         • Inner spinning arc: border-t-[#ff9324] + animate-spin
+     - Inside the ring, a small white circle holds a 16px dot
+       (bg-[#ff9324] + animate-pulse) that glows in sync.
+     - Below the ring: a bold label (animate-pulse) + grey subtitle
+       "Please wait a moment…"
 
-   Bottom of the page has a "No thanks, go back to events" text link → /
+  2. SectionSpinner  — for when only a DATA SECTION inside a page loads
+     - Identical ring design but scaled down to 56px.
+     - No page background — just centered vertically with py-24.
+     - Used in tables and event grids where the navbar/header
+       should still be visible while data loads.
 
-2. Route registered — frontend/src/App.jsx
-   Added:
-     import EventAddons from "./pages/EventAddons";
-     <Route path="/event-extras" element={<EventAddons />} />
-   (public route, no auth required)
+  3. ButtonSpinner  — for SUBMIT BUTTONS while a form request is in-flight
+     - Renders an inline <span> containing:
+         • A 16px SVG circle spinner (animate-spin, currentColor so it
+           inherits the button's text colour — white on orange buttons).
+         • The label text beside it (e.g. "Submitting…", "Signing in…").
+     - Keeps the button the same size so the layout doesn't jump.
+     - Uses the classic "donut" SVG path:
+         <circle opacity-25 /> for the track
+         <path opacity-75 /> for the arc (the spinning part)
 
-3. Link in registration form — frontend/src/pages/RegisterEvent.jsx
-   Inside the white form card, immediately below the "Confirm Registration"
-   submit button, added a small section separated by a top border:
+---
 
-     "Want a certificate of participation or a one-on-one session
-      with our keynote speaker?"
-     [Award icon] [Mic2 icon] Click here to book / pay →
+STEP 2 — Updated every page that had a loading state
 
-   The link uses React Router's <Link> and builds the URL dynamically:
-     /event-extras?eventId={eventId}&title={eventTitle}&name={encodeURIComponent(form.name)}
+  SECTION-LEVEL SPINNERS (SectionSpinner):
+  These pages had a plain <div className="text-center py-20 text-gray-400">
+  Loading...</div> block inside a conditional. Each was replaced with:
+    <SectionSpinner label="Loading …" />
 
-   This means the name typed into the form so far is passed along as a
-   query param so the destination pages can pre-fill the participant's name.
-   If the user hasn't typed a name yet, the field simply starts empty.
+  Pages updated:
+  • AdminDashboard.jsx     — was "Loading events..."
+  • LandingPage.jsx        — was "Loading events..."
+  • ViewRegistered.jsx     — was "Loading registrants..."
+  • AdminCertificates.jsx  — was "Loading..."
+  • AdminSpeakerBookings.jsx — was "Loading..."
 
-   The link is styled with text-primary (orange) and a hover underline so
-   it stands out from the form without competing with the main Register button.
+  FULL-PAGE SPINNER (PageSpinner):
+  EditEvent.jsx has a separate "fetching" state that runs before the page
+  renders (it fetches the existing event data). It previously returned a
+  bare min-h-screen centered div. Now it returns:
+    <PageSpinner label="Loading event…" />
 
-Why this approach:
-  - No new backend work needed — the destination pages (/certificate-payment
-    and /speaker-booking) already exist with their own API calls.
-  - Keeps concerns separated: EventAddons.jsx is purely a navigation hub.
-  - Works for people who missed the success-screen prompts or who want to
-    book before/after registering.
+  BUTTON SPINNERS (ButtonSpinner):
+  Every submit button previously had:
+    {loading ? "Submitting..." : "Button Text"}
+  This was replaced with:
+    {loading ? <ButtonSpinner label="Submitting…" /> : "Button Text"}
+
+  Pages updated:
+  • RegisterEvent.jsx      — "Submitting…"
+  • CertificatePayment.jsx — "Submitting…"
+  • SpeakerBooking.jsx     — "Submitting…"
+  • LoginPage.jsx          — "Signing in…"
+  • SignupPage.jsx         — "Creating account…"
+  • CreateEvent.jsx        — "Creating…"
+  • EditEvent.jsx          — "Saving…"
+
+---
+
+WHY THIS APPROACH
+
+  • Single source of truth — all spinner styles live in one file.
+    To change the brand colour or animation, edit Spinner.jsx once.
+  • No extra libraries — uses only Tailwind CSS utility classes and a
+    small inline SVG. No react-spinners, no framer-motion dependency.
+  • Three sizes for three contexts — full-page, section, and button
+    each have the right visual weight for where they appear.
+  • animate-spin is a standard Tailwind utility (1 full rotation per
+    0.75 s linear). animate-pulse makes the inner dot breathe softly,
+    giving the spinner a layered, modern feel.
+  • The button spinner inherits currentColor so it automatically turns
+    white on the orange buttons without any extra class.

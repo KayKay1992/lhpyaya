@@ -239,9 +239,16 @@ const ViewRegistered = () => {
                   >
                     {/* Desktop row */}
                     <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
-                      <span className="font-medium truncate">{r.name}</span>
-                      <span className="text-gray-500 truncate">{r.email}</span>
-                      <span className="text-gray-500 truncate">
+                      <span className="font-medium truncate" title={r.name}>
+                        {r.name}
+                      </span>
+                      <span className="text-gray-500 truncate" title={r.email}>
+                        {r.email}
+                      </span>
+                      <span
+                        className="text-gray-500 truncate"
+                        title={r.phone || undefined}
+                      >
                         {r.phone || <span className="text-gray-300">—</span>}
                       </span>
                       <span className="text-gray-400 text-xs">
@@ -251,7 +258,10 @@ const ViewRegistered = () => {
                           year: "numeric",
                         })}
                       </span>
-                      <span className="text-gray-500 text-xs truncate">
+                      <span
+                        className="text-gray-500 text-xs truncate"
+                        title={r.referral || undefined}
+                      >
                         {r.referral || <span className="text-gray-300">—</span>}
                       </span>
                       <div>
@@ -285,11 +295,19 @@ const ViewRegistered = () => {
                     </div>
                     {/* Mobile row */}
                     <div className="grid sm:hidden grid-cols-[1fr_1fr_1fr_72px_60px] gap-2 px-4 py-3 text-sm text-gray-700 items-center">
-                      <span className="font-medium truncate">{r.name}</span>
-                      <span className="text-gray-500 truncate text-xs">
+                      <span className="font-medium truncate" title={r.name}>
+                        {r.name}
+                      </span>
+                      <span
+                        className="text-gray-500 truncate text-xs"
+                        title={r.email}
+                      >
                         {r.email}
                       </span>
-                      <span className="text-gray-500 truncate text-xs">
+                      <span
+                        className="text-gray-500 truncate text-xs"
+                        title={r.phone || undefined}
+                      >
                         {r.phone || <span className="text-gray-300">—</span>}
                       </span>
                       <div>

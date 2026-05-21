@@ -1,150 +1,95 @@
-====================================================================
-  THREE-FEATURE UPDATE — IMPLEMENTATION NOTES
-  Date: May 20, 2026
-====================================================================
+===================================================
+FEATURE: Hover Tooltips on Admin Registrant Table
+===================================================
 
-FEATURE 1: "WHO TOLD YOU ABOUT THIS EVENT?" — REFERRAL FIELD
-====================================================================
+How it was done:
+-----------------
+The ViewRegistered.jsx page shows a table of registered participants.
+On narrow screens, cells are truncated with Tailwind's `truncate` class,
+meaning long emails or phone numbers are cut off with "...".
 
-PURPOSE:
-  Captures how each participant heard about the event so the
-  organiser can track which outreach channels are most effective.
+To let the admin see the full value without extra popups or libraries,
+we added the native HTML `title` attribute to every `<span>` that holds
+a truncatable value. When you hover over a cell, the browser automatically
+shows the full text in a small tooltip bubble — no JavaScript or extra
+component needed.
 
-BACKEND CHANGES:
+Files changed:
+- frontend/src/pages/ViewRegistered.jsx
 
-  1. backend/models/Registration.js
-     - Added a new optional field to the schema:
-         referral: { type: String, trim: true, default: "" }
-     - It is optional (not required) so existing registrations
-       without the field are unaffected.
+Cells updated (both desktop grid and mobile grid):
+  - Name     → title={r.name}
+  - Email    → title={r.email}
+  - Phone    → title={r.phone || undefined}   (undefined hides empty tooltip)
+  - Referral → title={r.referral || undefined}
 
-  2. backend/controllers/registrationController.js  — registerForEvent
-     - Destructures `referral` from req.body alongside name, email,
-       and phone.
-     - Passes `referral: referral || ""` into Registration.create()
-       so the value is saved to MongoDB.
+Using `|| undefined` on optional fields means the tooltip only appears
+when the cell actually has a value — no blank tooltip box on empty cells.
 
-FRONTEND CHANGES:
+===================================================
+FEATURE: Event Add-Ons Page + Registration Form Link
+===================================================
 
-  3. frontend/src/pages/RegisterEvent.jsx
-     - Form state updated from { name, email, phone } to
-       { name, email, phone, referral: "" }.
-     - A new optional input field is rendered after the Phone field:
-         Label:       "Who told you about this event?"
-         Placeholder: "e.g. A friend, Social media, Poster,
-                       Church announcement..."
-         Type:        text (free-form, not required)
-     - The field value is submitted with the rest of the form.
+User request:
+  Add a link/button on the registration page (after the Register button)
+  that says "Do you want a certificate of participation or speak with our
+  keynote speaker one on one? Click here." This should open a new page
+  where the participant can book the speaker session and/or pay for a
+  certificate — just like the prompts on the success screen.
 
-  4. frontend/src/pages/ViewRegistered.jsx  (admin view)
-     - Added MessageSquare to the lucide-react icon imports.
-     - Desktop table grid expanded from 6 columns to 7 columns:
-         [Name | Email | Phone | Registered | Referral | Attended | Delete]
-     - "Referral" column header added with a MessageSquare icon.
-     - Each registrant row now shows the referral answer, or an
-       em-dash (—) if the participant left it blank.
-     - Mobile rows are unchanged (already space-constrained).
+How it was done:
+-----------------
 
-====================================================================
-FEATURE 2: LIVE ATTENDANCE COUNT
-====================================================================
+1. New page — frontend/src/pages/EventAddons.jsx
+   A standalone public page at the route /event-extras.
+   It reads three query parameters from the URL:
+     - eventId   (passed from the registration form)
+     - title     (the event name, URL-encoded)
+     - name      (the participant's name, pre-fills destination forms)
 
-PURPOSE:
-  Gives the admin an at-a-glance summary of how many registered
-  participants actually showed up, without manual counting.
+   The page shows two bold, coloured action cards side by side:
 
-BACKEND:
-  No backend changes needed. The `attended` boolean already exists
-  on every Registration document and is returned in the existing
-  GET /api/registrations/:eventId response.
+   CERTIFICATE CARD (amber theme):
+   - Icon: Award (lucide-react), amber badge
+   - Shows the fee: ₦2,000
+   - Button navigates to /certificate-payment with the same query params
+   - Participant then sees payment details, fills certificate name, uploads evidence
 
-FRONTEND CHANGES:
+   SPEAKER BOOKING CARD (blue theme):
+   - Icon: Mic2 (lucide-react), blue badge
+   - Shows the fee: ₦20,000
+   - Button navigates to /speaker-booking with the same query params
+   - Participant fills phone, uploads payment evidence
 
-  frontend/src/pages/ViewRegistered.jsx
-  - The header stat area previously showed one orange pill:
-        "X registered"
-  - It now shows TWO pills side by side:
-        🟠  "X registered"   (orange — total sign-ups)
-        🟢  "X attended"     (green  — total marked as attended)
-  - The attended count is computed inline:
-        registrants.filter((r) => r.attended).length
-  - Because registrants state is updated immediately every time
-    the admin clicks "Mark" / "Attended" (via the existing
-    handleToggleAttend function), the green count updates in
-    real time without any page reload.
+   Bottom of the page has a "No thanks, go back to events" text link → /
 
-====================================================================
-FEATURE 3: CERTIFICATE & SPEAKER PROMPTS — REDESIGNED & MOVED
-====================================================================
+2. Route registered — frontend/src/App.jsx
+   Added:
+     import EventAddons from "./pages/EventAddons";
+     <Route path="/event-extras" element={<EventAddons />} />
+   (public route, no auth required)
 
-PURPOSE:
-  The previous prompts were small text lines with underlined links
-  that were easy to miss. They are now bold, colourful action cards
-  that are impossible to overlook. They have also been repositioned
-  so participants see the event details first and then are presented
-  with the add-on offers.
+3. Link in registration form — frontend/src/pages/RegisterEvent.jsx
+   Inside the white form card, immediately below the "Confirm Registration"
+   submit button, added a small section separated by a top border:
 
-PREVIOUS ORDER on the success screen:
-  1. ✅ "You're registered!" heading + message
-  2. Certificate text prompt  (amber, small text)
-  3. Speaker text prompt      (blue, small text)
-  4. Event details card       (date / time / location)
-  5. "Back to Events" button
+     "Want a certificate of participation or a one-on-one session
+      with our keynote speaker?"
+     [Award icon] [Mic2 icon] Click here to book / pay →
 
-NEW ORDER on the success screen:
-  1. ✅ "You're registered!" heading + message
-  2. Event details card       (date / time / location)  ← moved up
-  3. Certificate action card  (amber, full card)        ← redesigned
-  4. Speaker action card      (blue, full card)         ← redesigned
-  5. "Back to Events" button
+   The link uses React Router's <Link> and builds the URL dynamically:
+     /event-extras?eventId={eventId}&title={eventTitle}&name={encodeURIComponent(form.name)}
 
-CERTIFICATE CARD (amber theme):
-  - Border:      2px solid amber-300
-  - Background:  amber-50
-  - Icon badge:  9×9 amber-400 rounded square with a white Award icon
-  - Heading:     "Do You Need a Certificate of Participation?"
-  - Sub-text:    "Get an official certificate to recognise your
-                  attendance at this event."
-  - Button:      Full-width solid amber-400 button
-                 Label: "Yes, Get My Certificate →"
-                 Navigates to /certificate-payment with eventId,
-                 title, and participant name pre-filled.
+   This means the name typed into the form so far is passed along as a
+   query param so the destination pages can pre-fill the participant's name.
+   If the user hasn't typed a name yet, the field simply starts empty.
 
-SPEAKER BOOKING CARD (blue theme):
-  - Border:      2px solid blue-300
-  - Background:  blue-50
-  - Icon badge:  9×9 blue-500 rounded square with a white Mic2 icon
-  - Heading:     "Book a One-on-One with Our Keynote Speaker!"
-  - Sub-text:    "Meet personally with the CEO of Pioneer Airline —
-                  a rare opportunity you don't want to miss."
-  - Button:      Full-width solid blue-500 button
-                 Label: "Yes, Book My Session →"
-                 Navigates to /speaker-booking with eventId,
-                 title, and participant name pre-filled.
+   The link is styled with text-primary (orange) and a hover underline so
+   it stands out from the form without competing with the main Register button.
 
-ADDITIONAL IMPORTS ADDED to RegisterEvent.jsx:
-  - Award  (lucide-react) — used in the certificate card icon badge
-  - Mic2   (lucide-react) — used in the speaker card icon badge
-
-====================================================================
-HOW EVERYTHING FITS TOGETHER
-====================================================================
-
-PARTICIPANT EXPERIENCE (end-to-end):
-  1. Opens registration form → sees Name, Email, Phone fields,
-     then the new "Who told you about this event?" field.
-  2. Submits registration → success screen appears.
-  3. Sees event date/time/location at the top.
-  4. Sees the bold amber Certificate card — clicks if interested.
-  5. Sees the bold blue Speaker Session card — clicks if interested.
-  6. Clicks "Back to Events" when done.
-
-ADMIN EXPERIENCE (end-to-end):
-  1. Opens View Registrants for any event.
-  2. Sees TWO stat pills: total registered (orange) and total
-     attended (green).
-  3. In the table, sees a Referral column showing how each
-     participant heard about the event.
-  4. Marks attendance — the green "attended" count updates live.
-
-====================================================================
+Why this approach:
+  - No new backend work needed — the destination pages (/certificate-payment
+    and /speaker-booking) already exist with their own API calls.
+  - Keeps concerns separated: EventAddons.jsx is purely a navigation hub.
+  - Works for people who missed the success-screen prompts or who want to
+    book before/after registering.

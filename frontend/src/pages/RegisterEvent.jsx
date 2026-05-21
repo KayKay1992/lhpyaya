@@ -366,6 +366,22 @@ const RegisterEvent = () => {
               >
                 {loading ? "Submitting..." : "Confirm Registration"}
               </button>
+
+              {/* Add-ons prompt */}
+              <div className="mt-4 border-t border-orange-100 pt-4 text-center">
+                <p className="text-xs text-gray-500 mb-2">
+                  Want a certificate of participation or a one-on-one session
+                  with our keynote speaker?
+                </p>
+                <Link
+                  to={`/event-extras?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline transition"
+                >
+                  <Award size={14} />
+                  <Mic2 size={14} />
+                  Click here to book →
+                </Link>
+              </div>
             </form>
           </div>
         </div>

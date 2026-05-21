@@ -13,6 +13,7 @@ import CertificatePayment from "./pages/CertificatePayment";
 import AdminCertificates from "./pages/AdminCertificates";
 import SpeakerBooking from "./pages/SpeakerBooking";
 import AdminSpeakerBookings from "./pages/AdminSpeakerBookings";
+import EventAddons from "./pages/EventAddons";
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/certificate-payment" element={<CertificatePayment />} />
       <Route path="/speaker-booking" element={<SpeakerBooking />} />
+      <Route path="/event-extras" element={<EventAddons />} />
 
       {/* protected route */}
       <Route

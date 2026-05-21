@@ -122,6 +122,27 @@ const RegisterEvent = () => {
             </p>
           </div>
 
+          {/* Speaker booking prompt */}
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 mb-4 text-left">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-gray-900">
+                Do you want to book a one-on-one session with one of our Keynote
+                Speakers — The CEO of Pioneer Airline?
+              </span>{" "}
+              If Yes,{" "}
+              <button
+                onClick={() =>
+                  navigate(
+                    `/speaker-booking?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`,
+                  )
+                }
+                className="text-blue-600 font-bold underline underline-offset-2 hover:text-blue-800 transition"
+              >
+                Click Here!
+              </button>
+            </p>
+          </div>
+
           {eventDetails && (
             <div className="bg-orange-50 border border-orange-100 rounded-2xl px-5 py-4 mb-6 text-left space-y-2.5">
               <div className="flex items-center gap-2.5 text-sm text-gray-700">

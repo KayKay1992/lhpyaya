@@ -11,6 +11,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import EditEvent from "./pages/EditEvent";
 import CertificatePayment from "./pages/CertificatePayment";
 import AdminCertificates from "./pages/AdminCertificates";
+import SpeakerBooking from "./pages/SpeakerBooking";
+import AdminSpeakerBookings from "./pages/AdminSpeakerBookings";
 
 const App = () => {
   return (
@@ -20,6 +22,7 @@ const App = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/certificate-payment" element={<CertificatePayment />} />
+      <Route path="/speaker-booking" element={<SpeakerBooking />} />
 
       {/* protected route */}
       <Route
@@ -59,6 +62,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <AdminCertificates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/speaker-bookings"
+        element={
+          <ProtectedRoute>
+            <AdminSpeakerBookings />
           </ProtectedRoute>
         }
       />

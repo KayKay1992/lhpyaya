@@ -13,6 +13,7 @@ import {
   Users,
   LogOut,
   Award,
+  Mic2,
 } from "lucide-react";
 import rccgLogo from "../assets/download (1).jpg";
 import yayaLogo from "../assets/yaya.png";
@@ -122,6 +123,12 @@ const AdminDashboard = () => {
             className="flex items-center gap-2 bg-white hover:bg-orange-50 active:scale-95 text-[#ff9324] text-sm font-bold px-5 py-2.5 rounded-xl transition border border-orange-200"
           >
             <Award size={16} /> Certificates
+          </button>
+          <button
+            onClick={() => navigate("/admin/speaker-bookings")}
+            className="flex items-center gap-2 bg-white hover:bg-blue-50 active:scale-95 text-blue-600 text-sm font-bold px-5 py-2.5 rounded-xl transition border border-blue-200"
+          >
+            <Mic2 size={16} /> Speaker Sessions
           </button>
         </div>
 

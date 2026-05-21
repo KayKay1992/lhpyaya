@@ -40,6 +40,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/events", require("./routes/eventRoutes"));
 app.use("/api/registrations", require("./routes/registrationRoutes"));
 app.use("/api/certificates", require("./routes/certificateRoutes"));
+app.use("/api/speaker-bookings", require("./routes/speakerBookingRoutes"));
 
 //start the server
 const PORT = process.env.PORT || 5000;

@@ -1,131 +1,200 @@
 ====================================================================
-  CERTIFICATE OF PARTICIPATION FEATURE — IMPLEMENTATION NOTES
+  SPEAKER SESSION BOOKING FEATURE — IMPLEMENTATION NOTES
   Date: May 20, 2026
 ====================================================================
 
 OVERVIEW
 --------
-A full Certificate of Participation flow was added to the LHP-YAYA
-app, covering the participant-facing payment page, the success screen
-prompt, and an admin management page. Both frontend and backend were
-updated.
+A full "Book a One-on-One Session with the Keynote Speaker" flow was
+added to the LHP-YAYA app. This is separate from the Certificate of
+Participation feature and sits alongside it on the registration
+success screen. It covers a participant-facing payment page, the
+success screen prompt, and an admin management page for viewing all
+bookings. Both backend and frontend were updated.
 
 ====================================================================
 BACKEND CHANGES
 ====================================================================
 
-1. NEW FILE: backend/models/CertificateRequest.js
-   - Mongoose model that stores one certificate request per participant.
+1. NEW FILE: backend/models/SpeakerBooking.js
+   - Mongoose model that stores one booking record per participant.
    - Fields:
-       • event        — ref to Event model (ObjectId)
-       • participantName — the participant's real/registered name
-       • certificateName — exactly how they want the name on the cert
-       • email        — participant's email
-       • paymentEvidence — Cloudinary URL of the uploaded proof of payment
-       • status       — "pending" | "approved" | "rejected" (default: pending)
-   - Timestamps (createdAt, updatedAt) are auto-added.
+       • event          — ref to Event model (ObjectId), required
+       • name           — participant's full name, required, trimmed
+       • phone          — participant's phone number, required, trimmed
+       • paymentEvidence — Cloudinary URL of the uploaded payment proof
+       • status         — "pending" | "approved" | "rejected"
+                          (default: "pending")
+   - Timestamps (createdAt, updatedAt) are auto-added by Mongoose.
 
-2. NEW FILE: backend/middleware/certificateUploadMiddleware.js
-   - Separate Multer + Cloudinary storage config for payment evidence.
-   - Saves files to the "lhpyaya-payment-evidence" folder on Cloudinary.
-   - Accepts: JPG, PNG, WEBP images and PDF files.
-   - File size limit: 10 MB.
+2. NEW FILE: backend/controllers/speakerBookingController.js
+   Two exported functions:
 
-3. NEW FILE: backend/controllers/certificateController.js
-   - submitRequest  (POST /api/certificates) — PUBLIC
-       • Validates all required fields and email format.
-       • Requires a file upload (paymentEvidence).
-       • Saves a new CertificateRequest document to the database.
-   - getAllRequests (GET  /api/certificates) — ADMIN ONLY
-       • Returns all certificate requests sorted newest first.
-       • Populates event title and date for display.
+   a) submitBooking  — handles POST /api/speaker-bookings  (PUBLIC)
+      • Validates that eventId, name, and phone are all present.
+      • Requires a file to be uploaded (paymentEvidence); returns 400
+        if missing.
+      • Validates phone number format: 7–15 digits, optional leading +,
+        allowing spaces, dashes, dots, and parentheses as separators.
+      • Saves a new SpeakerBooking document to MongoDB.
+      • Returns 201 with the created document on success.
 
-4. NEW FILE: backend/routes/certificateRoutes.js
-   - POST /   → certificateUpload.single("paymentEvidence") → submitRequest
-   - GET  /   → protect → adminOnly → getAllRequests
+   b) getAllBookings  — handles GET /api/speaker-bookings  (ADMIN ONLY)
+      • Fetches all SpeakerBooking documents from the database.
+      • Populates the event field with title and date for display.
+      • Sorts results by newest first (createdAt: -1).
+      • Returns the array as JSON.
 
-5. UPDATED: backend/server.js
+3. NEW FILE: backend/routes/speakerBookingRoutes.js
+   - POST /   → certificateUploadMiddleware.single("paymentEvidence")
+                → submitBooking
+                (reuses the existing Cloudinary upload middleware that
+                 already supports JPG/PNG/WEBP/PDF up to 10 MB, uploaded
+                 to the "lhpyaya-payment-evidence" folder on Cloudinary)
+   - GET  /   → protect → adminOnly → getAllBookings
+
+4. UPDATED: backend/server.js
    - Registered the new route:
-       app.use("/api/certificates", require("./routes/certificateRoutes"))
+       app.use("/api/speaker-bookings",
+               require("./routes/speakerBookingRoutes"))
 
 ====================================================================
 FRONTEND CHANGES
 ====================================================================
 
-6. NEW FILE: frontend/src/pages/CertificatePayment.jsx
-   - A public page accessible at /certificate-payment?eventId=...&title=...&name=...
-   - PAYMENT DETAILS CARD (read-only display):
-       • Amount:          ₦2,000
-       • Account Name:    RCCG GLORIOUS YOUTH FELLOWSHIP
-       • Bank:            FIDELITY BANK
-       • Account Number:  5210040973  (with a one-click copy button)
-   - FORM (participant fills in):
-       • Full Name (as registered) — pre-filled from query param if available
-       • Name to Appear on Certificate — printed exactly as entered
-       • Email Address
-       • Upload Proof of Payment — accepts image (JPG/PNG/WEBP) or PDF,
-         shows image preview or PDF filename before submitting
-   - On submit, sends a multipart/form-data POST to /api/certificates.
-   - On success, shows a confirmation screen.
+5. NEW FILE: frontend/src/pages/SpeakerBooking.jsx
+   Public page accessible at:
+     /speaker-booking?eventId=...&title=...&name=...
+
+   PAYMENT DETAILS CARD (read-only display at the top):
+     • Amount:          ₦20,000
+     • Account Name:    RCCG GLORIOUS YOUTH FELLOWSHIP
+     • Bank:            FIDELITY BANK
+     • Account Number:  5210040973
+       (with a one-click copy button that shows a green tick on copy)
+
+   FORM (participant fills in):
+     • Full Name       — input field, pre-filled from the "name" query
+                         param that is passed from the success screen
+     • Phone Number    — tel input, validated on submit
+     • Upload Proof of Payment — file picker that accepts images
+                         (JPG/PNG/WEBP) and PDF files up to 10 MB.
+                         Shows a live image preview if an image is
+                         chosen, or a PDF filename placeholder for PDFs.
+
+   SUBMISSION:
+     • All fields are validated client-side before sending.
+     • Sends a multipart/form-data POST to /api/speaker-bookings.
+     • Shows a loading state ("Submitting...") on the button.
+     • On success: renders a full-screen confirmation card with a green
+       tick and a "Back to Events" button.
+     • On error: shows a toast notification with the server's message.
+
+   DESIGN NOTES:
+     • Uses the same orange brand colour (text-primary / bg-primary)
+       and card styles as the rest of the app.
+     • The Keynote Speaker title ("CEO of Pioneer Airline") is shown
+       in a subtitle below the page heading.
+     • A microphone icon (Mic2 from lucide-react) is used as the
+       page icon instead of the certificate icon used in the cert page.
+
+6. NEW FILE: frontend/src/pages/AdminSpeakerBookings.jsx
+   Protected admin page at /admin/speaker-bookings.
+
+   DATA FETCHING:
+     • On mount, calls GET /api/speaker-bookings (auth token is
+       automatically attached by the Axios interceptor in api.js).
+     • Displays a loading state while fetching and an empty state if
+       there are no bookings.
+
+   TABLE LAYOUT (responsive — stacks on mobile, grid on md+):
+     Column 1 — Participant Name
+       • Shown with an orange avatar circle and the User icon.
+       • Submission date displayed in smaller text below the name.
+     Column 2 — Phone Number
+       • Displayed with a Phone icon from lucide-react.
+     Column 3 — Event
+       • Event title populated from the database, with a CalendarDays
+         icon.
+     Column 4 — Receipt (action column)
+       • "View Receipt" button — opens the Cloudinary payment evidence
+         URL in a new browser tab (noopener,noreferrer for security).
+
+   SEARCH:
+     • A search bar in the top-right filters the list in real time.
+     • Searches across participant name, phone number, and event title.
+
+   NAVIGATION:
+     • "← Dashboard" link returns to /dashboard.
+     • "Sign Out" button logs out and redirects to /login.
 
 7. UPDATED: frontend/src/pages/RegisterEvent.jsx
-   - On the SUCCESS screen (after a participant registers for an event),
-     a new amber-highlighted prompt is shown ABOVE the "Back to Events" button:
+   On the SUCCESS SCREEN (shown after a participant registers):
+     A new blue-themed prompt card was added BELOW the existing
+     amber certificate prompt and ABOVE the event details block:
 
-       "Do You Need a Certificate of Participation?
-        If yes, Click Here!"
+       "Do you want to book a one-on-one session with one of our
+        Keynote Speakers — The CEO of Pioneer Airline?
+        If Yes, Click Here!"
 
-   - Clicking "Click Here!" navigates to /certificate-payment with
-     eventId, title, and the participant's name pre-filled in the URL.
+     Clicking "Click Here!" navigates to:
+       /speaker-booking?eventId=...&title=...&name=...
+     The eventId, event title, and participant's name are all
+     passed as query parameters so the booking page can pre-fill them.
 
-8. NEW FILE: frontend/src/pages/AdminCertificates.jsx
-   - A protected admin page at /admin/certificates.
-   - Fetches all certificate requests from GET /api/certificates.
-   - Displays a searchable table with columns:
-       • Participant Name (with submission date)
-       • Name on Certificate (highlighted in orange — this is what gets printed)
-       • Event name
-       • Email
-       • Action buttons (per row):
-           ─ View Receipt      → opens the uploaded payment evidence in a new tab
-           ─ Generate Certificate → opens a new browser window with a fully styled
-                                    printable certificate and auto-triggers the
-                                    browser's print dialog
-   - Search bar filters by participant name, certificate name, email, or event title.
-   - GENERATE CERTIFICATE logic:
-       • Builds an HTML page in memory with a decorated certificate layout.
-       • Uses Google Fonts (Playfair Display + Open Sans).
-       • Fills in the certificate name, event title, event date, and issue date.
-       • Includes corner decorations, a signature block, and RCCG branding.
-       • Opens in a new tab and auto-prints.
+   VISUAL DISTINCTION:
+     • Certificate prompt  → amber background  (bg-amber-50)
+     • Speaker booking prompt → blue background (bg-blue-50)
+     This colour coding helps participants immediately tell the two
+     offers apart.
 
-9. UPDATED: frontend/src/App.jsx
-   - Added two new routes:
-       • /certificate-payment          → <CertificatePayment />  (public)
-       • /admin/certificates           → <AdminCertificates />   (protected)
+8. UPDATED: frontend/src/App.jsx
+   Added two new routes:
+     • /speaker-booking          → <SpeakerBooking />       (public)
+     • /admin/speaker-bookings   → <AdminSpeakerBookings /> (protected,
+                                    wrapped in <ProtectedRoute>)
 
-10. UPDATED: frontend/src/pages/AdminDashboard.jsx
-    - Added an "Certificates" button (with Award icon) next to "Create Event"
-      in the dashboard header. Navigates to /admin/certificates.
+9. UPDATED: frontend/src/pages/AdminDashboard.jsx
+   - Added Mic2 to the lucide-react icon imports.
+   - Added a "Speaker Sessions" button (blue outline style) next to the
+     existing "Certificates" button in the dashboard header.
+   - Clicking it navigates to /admin/speaker-bookings.
+   - The button is styled differently from the Certificates button
+     (blue border/text instead of orange) to visually separate the
+     two admin areas.
 
 ====================================================================
 HOW THE FLOW WORKS END-TO-END
 ====================================================================
 
 PARTICIPANT SIDE:
-  1. Participant registers for an event → sees the success screen.
-  2. Sees the certificate prompt → clicks "Click Here!".
-  3. Lands on /certificate-payment with their name pre-filled.
-  4. Reads the payment details, makes a bank transfer of ₦2,000.
-  5. Fills in their certificate name and email, uploads payment screenshot.
-  6. Submits → sees confirmation screen.
+  1. Participant fills in the registration form and submits.
+  2. Success screen appears — two prompt cards are shown:
+       • Amber card  → Certificate of Participation (₦2,000)
+       • Blue card   → One-on-one with Keynote Speaker (₦20,000)
+  3. Participant clicks "Click Here!" on the blue card.
+  4. Lands on /speaker-booking with their name pre-filled.
+  5. Reads the payment details and makes a ₦20,000 bank transfer to:
+         RCCG GLORIOUS YOUTH FELLOWSHIP
+         FIDELITY BANK — 5210040973
+  6. Enters their name, phone number, and uploads payment screenshot.
+  7. Clicks "Submit Booking Request" — sees confirmation screen.
 
 ADMIN SIDE:
-  1. Admin logs in → clicks "Certificates" on the dashboard.
-  2. Sees a table of all participants who requested a certificate.
-  3. For each entry:
-       – Clicks "View Receipt" to verify the payment evidence.
-       – Clicks "Generate Certificate" to produce and print the certificate
-         with the participant's preferred name.
+  1. Admin logs in → Admin Dashboard.
+  2. Clicks "Speaker Sessions" button in the header.
+  3. Sees a full table of every participant who booked a session,
+     showing their Name, Phone Number, and Event.
+  4. Clicks "View Receipt" on any row to verify the participant's
+     payment evidence before confirming their session slot.
+
+====================================================================
+ACCOUNT DETAILS USED (both Certificate and Speaker Booking pages)
+====================================================================
+  Account Name:    RCCG GLORIOUS YOUTH FELLOWSHIP
+  Bank:            FIDELITY BANK
+  Account Number:  5210040973
+  Certificate fee: ₦2,000
+  Speaker session: ₦20,000
 
 ====================================================================

@@ -84,9 +84,7 @@ const EditEvent = () => {
       fd.append("name", speakerForm.name.trim());
       fd.append("title", speakerForm.title.trim());
       if (speakerForm.image) fd.append("image", speakerForm.image);
-      const res = await api.post(`/events/${id}/speakers`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post(`/events/${id}/speakers`, fd);
       setSpeakers(res.data.speakers);
       setSpeakerForm({ name: "", title: "", image: null, preview: null });
       toast.success("Speaker added!");

@@ -117,7 +117,9 @@ const RegisterEvent = () => {
               <div className="flex items-center gap-2.5 text-sm text-gray-700">
                 <CalendarDays size={15} className="text-primary shrink-0" />
                 <span>
-                  {new Date(eventDetails.date).toLocaleDateString("en-US", {
+                  {new Date(
+                    eventDetails.date.slice(0, 10) + "T12:00:00",
+                  ).toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
@@ -348,7 +350,9 @@ const RegisterEvent = () => {
                   {eventDetails.date && (
                     <span className="flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
                       <CalendarDays size={12} />
-                      {new Date(eventDetails.date).toLocaleDateString("en-US", {
+                      {new Date(
+                        eventDetails.date.slice(0, 10) + "T12:00:00",
+                      ).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",

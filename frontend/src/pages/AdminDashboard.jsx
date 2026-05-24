@@ -53,7 +53,7 @@ const AdminDashboard = () => {
   };
 
   const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString("en-US", {
+    new Date(dateStr.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
       month: "long",

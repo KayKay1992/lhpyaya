@@ -5,12 +5,10 @@ const Event = require("../models/Event");
 // @route   POST /api/registrations/:eventId
 // @access  Public
 const registerForEvent = async (req, res) => {
-  const { name, email, phone, referral } = req.body;
+  const { name, phone, referral } = req.body;
 
-  if (!name || !email) {
-    return res
-      .status(400)
-      .json({ message: "Please provide your name and email" });
+  if (!name) {
+    return res.status(400).json({ message: "Please provide your name" });
   }
 
   try {
@@ -19,20 +17,9 @@ const registerForEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    const alreadyRegistered = await Registration.findOne({
-      event: req.params.eventId,
-      email,
-    });
-    if (alreadyRegistered) {
-      return res
-        .status(400)
-        .json({ message: "You have already registered for this event" });
-    }
-
     const registration = await Registration.create({
       event: req.params.eventId,
       name,
-      email,
       phone: phone || "",
       referral: referral || "",
     });

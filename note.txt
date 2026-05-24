@@ -1,99 +1,114 @@
 ===================================================
-FEATURE: Beautiful Loading Spinners Across All Pages
+FEATURE: Registration Form & Success Page Overhaul
 ===================================================
 
-User request:
-  Replace all plain "Loading..." / "Submitting..." text with a beautiful
-  spinner on a modern background — applied to every page in the app.
+User requests:
+  1. Make the add-ons link (certificate / speaker session) more unique
+     and visible on the registration page.
+  2. Remove the email field from the registration form so people without
+     email can register; update the admin view accordingly.
+  3. On the registration success page, ask the registrant to join the
+     WhatsApp event community and volunteer team.
+  4. Also show both WhatsApp links on the registration form page.
 
 ---
 
-HOW IT WAS IMPLEMENTED
------------------------
+WHAT WAS CHANGED
+-----------------
 
-STEP 1 — Created a single reusable component file
-  File: frontend/src/components/Spinner.jsx
+── 1. Add-ons prompt redesigned (RegisterEvent.jsx) ──────────────────────
 
-  Three named exports were created in this one file so any page can
-  import only what it needs:
+BEFORE: A small grey text line + plain underline link at the bottom of
+        the form card — easy to miss.
 
-  1. PageSpinner  — for when an ENTIRE page is loading
-     - Renders a full-screen div with the same orange-50 gradient
-       background used across the app (bg-linear-to-br from-orange-50
-       via-white to-amber-50).
-     - Contains an 80px ring made of two layered border divs:
-         • Outer static ring: border-orange-100 (the "track")
-         • Inner spinning arc: border-t-[#ff9324] + animate-spin
-     - Inside the ring, a small white circle holds a 16px dot
-       (bg-[#ff9324] + animate-pulse) that glows in sync.
-     - Below the ring: a bold label (animate-pulse) + grey subtitle
-       "Please wait a moment…"
+AFTER:  A bold gradient banner card (amber → orange) with:
+  • Two decorative semi-transparent circles in the background for depth.
+  • An icon badge showing both Award (certificate) and Mic2 (speaker) icons
+    side by side inside a frosted white/20 pill.
+  • Headline: "Get a Certificate or Book a Speaker Session!"
+  • Subtext:  "Limited slots — don't miss out!"
+  • A solid white button with orange text at the bottom of the card.
+  The contrast between the white button and the orange background makes
+  it impossible to miss while still fitting the app's colour scheme.
 
-  2. SectionSpinner  — for when only a DATA SECTION inside a page loads
-     - Identical ring design but scaled down to 56px.
-     - No page background — just centered vertically with py-24.
-     - Used in tables and event grids where the navbar/header
-       should still be visible while data loads.
+── 2. Email removed ──────────────────────────────────────────────────────
 
-  3. ButtonSpinner  — for SUBMIT BUTTONS while a form request is in-flight
-     - Renders an inline <span> containing:
-         • A 16px SVG circle spinner (animate-spin, currentColor so it
-           inherits the button's text colour — white on orange buttons).
-         • The label text beside it (e.g. "Submitting…", "Signing in…").
-     - Keeps the button the same size so the layout doesn't jump.
-     - Uses the classic "donut" SVG path:
-         <circle opacity-25 /> for the track
-         <path opacity-75 /> for the arc (the spinning part)
+Three layers were updated:
+
+  a) Backend — models/Registration.js
+     Changed email field from required:true → required:false, default:""
+     This means existing records keep their email; new records can omit it.
+
+  b) Backend — controllers/registrationController.js
+     - Removed email from the destructured request body.
+     - Removed the "!name || !email" validation check (now just "!name").
+     - Removed the duplicate-registration check that queried by email,
+       because without email there is no reliable unique identifier to
+       block duplicates on.
+     - Removed email from the Registration.create() call.
+
+  c) Frontend — pages/ViewRegistered.jsx (admin registrants table)
+     - Removed the Mail icon import from lucide-react.
+     - Removed email from the search/filter function (now searches name only).
+     - Updated the search input placeholder to "Search by name...".
+     - Removed the Email column header from both the desktop grid
+       (7-col → 6-col: grid-cols-[1fr_1fr_1fr_1fr_90px_80px]) and the
+       mobile grid (5-col → 4-col: grid-cols-[1fr_1fr_72px_60px]).
+     - Removed the email <span> cells from both the desktop and mobile
+       row layouts.
+
+  d) Frontend — pages/RegisterEvent.jsx (registration form)
+     - Removed email: "" from the form state object.
+     - Deleted the entire email validation block (regex check).
+     - Deleted the Email input field from the JSX form.
+
+── 3. WhatsApp links on the registration form (RegisterEvent.jsx) ────────
+
+Added two clickable rows below the add-ons banner, inside the form card:
+
+  Row 1 — Event Community
+    • Green circle avatar with "W", colour #25D366 (WhatsApp brand green).
+    • Label: "Join Event Community" / subtext: "Get updates on WhatsApp".
+    • Clicking opens: https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4
+    • Opens in a new tab (target="_blank" rel="noopener noreferrer").
+
+  Row 2 — Volunteer Team
+    • Teal circle avatar with "V", colour #128C7E (WhatsApp dark teal).
+    • Label: "Join Volunteer Team" / subtext: "Be part of the team!".
+    • Clicking opens: https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F
+
+  Both rows use bg-green-50 with a green border, and include a small
+  "Join →" label on the right that shifts slightly on hover.
+
+── 4. WhatsApp cards on the registration SUCCESS page (RegisterEvent.jsx) ─
+
+After the certificate and speaker booking prompt cards, two new styled
+cards were inserted before the "Back to Events" button:
+
+  Card 1 — WhatsApp Community (green theme)
+    • bg-green-50, border-2 border-green-200.
+    • "W" badge in #25D366 background.
+    • Heading: "Join Our WhatsApp Community!"
+    • Description: "Stay updated with event info, reminders, and
+      announcements."
+    • Full-width button in #25D366 green: "Yes, Join Community →"
+    • Same community link as above.
+
+  Card 2 — Volunteer Team (teal theme)
+    • bg-teal-50, border-2 border-teal-200.
+    • "V" badge in #128C7E background.
+    • Heading: "Do You Want to Join Our Volunteer Team?"
+    • Description explains this is for the event team's WhatsApp group.
+    • Full-width button in #128C7E teal: "Yes, Join Volunteer Group →"
+    • Same volunteer link as above.
+
+  The speaker card's bottom margin was adjusted from mb-6 → mb-4 to
+  keep consistent spacing with the two new cards added after it.
 
 ---
 
-STEP 2 — Updated every page that had a loading state
-
-  SECTION-LEVEL SPINNERS (SectionSpinner):
-  These pages had a plain <div className="text-center py-20 text-gray-400">
-  Loading...</div> block inside a conditional. Each was replaced with:
-    <SectionSpinner label="Loading …" />
-
-  Pages updated:
-  • AdminDashboard.jsx     — was "Loading events..."
-  • LandingPage.jsx        — was "Loading events..."
-  • ViewRegistered.jsx     — was "Loading registrants..."
-  • AdminCertificates.jsx  — was "Loading..."
-  • AdminSpeakerBookings.jsx — was "Loading..."
-
-  FULL-PAGE SPINNER (PageSpinner):
-  EditEvent.jsx has a separate "fetching" state that runs before the page
-  renders (it fetches the existing event data). It previously returned a
-  bare min-h-screen centered div. Now it returns:
-    <PageSpinner label="Loading event…" />
-
-  BUTTON SPINNERS (ButtonSpinner):
-  Every submit button previously had:
-    {loading ? "Submitting..." : "Button Text"}
-  This was replaced with:
-    {loading ? <ButtonSpinner label="Submitting…" /> : "Button Text"}
-
-  Pages updated:
-  • RegisterEvent.jsx      — "Submitting…"
-  • CertificatePayment.jsx — "Submitting…"
-  • SpeakerBooking.jsx     — "Submitting…"
-  • LoginPage.jsx          — "Signing in…"
-  • SignupPage.jsx         — "Creating account…"
-  • CreateEvent.jsx        — "Creating…"
-  • EditEvent.jsx          — "Saving…"
-
----
-
-WHY THIS APPROACH
-
-  • Single source of truth — all spinner styles live in one file.
-    To change the brand colour or animation, edit Spinner.jsx once.
-  • No extra libraries — uses only Tailwind CSS utility classes and a
-    small inline SVG. No react-spinners, no framer-motion dependency.
-  • Three sizes for three contexts — full-page, section, and button
-    each have the right visual weight for where they appear.
-  • animate-spin is a standard Tailwind utility (1 full rotation per
-    0.75 s linear). animate-pulse makes the inner dot breathe softly,
-    giving the spinner a layered, modern feel.
-  • The button spinner inherits currentColor so it automatically turns
-    white on the orange buttons without any extra class.
+FILES CHANGED
+  backend/models/Registration.js
+  backend/controllers/registrationController.js
+  frontend/src/pages/RegisterEvent.jsx
+  frontend/src/pages/ViewRegistered.jsx

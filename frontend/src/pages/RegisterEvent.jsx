@@ -22,7 +22,6 @@ import yayaLogo from "../assets/yaya.png";
 const RegisterEvent = () => {
   const [form, setForm] = useState({
     name: "",
-    email: "",
     phone: "",
     referral: "",
   });
@@ -62,13 +61,6 @@ const RegisterEvent = () => {
     e.preventDefault();
     if (!eventId) {
       toast.error("Invalid event. Please go back and try again.");
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email.trim())) {
-      toast.error("Please enter a valid email address.");
       return;
     }
 
@@ -161,7 +153,7 @@ const RegisterEvent = () => {
           </div>
 
           {/* Speaker booking prompt */}
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-5 mb-6 text-left shadow-sm">
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-5 mb-4 text-left shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
                 <Mic2 size={18} className="text-white" />
@@ -184,6 +176,53 @@ const RegisterEvent = () => {
             >
               Yes, Book My Session →
             </button>
+          </div>
+
+          {/* WhatsApp community */}
+          <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5 mb-4 text-left shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center shrink-0 text-white font-bold text-lg">
+                W
+              </div>
+              <p className="font-bold text-gray-900 text-sm leading-snug">
+                Join Our WhatsApp Community!
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 pl-12">
+              Stay updated with event info, reminders, and announcements.
+            </p>
+            <a
+              href="https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center bg-[#25D366] hover:bg-green-500 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
+            >
+              Yes, Join Community →
+            </a>
+          </div>
+
+          {/* Volunteer team */}
+          <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-5 mb-6 text-left shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-[#128C7E] flex items-center justify-center shrink-0 text-white font-bold text-lg">
+                V
+              </div>
+              <p className="font-bold text-gray-900 text-sm leading-snug">
+                Do You Want to Join Our Volunteer Team?
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 pl-12">
+              Be part of the team making this event happen — join our volunteer
+              WhatsApp group.
+            </p>
+            <a
+              href="https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center bg-[#128C7E] hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
+            >
+              Yes, Join Volunteer Group →
+            </a>
           </div>
 
           <button
@@ -318,21 +357,6 @@ const RegisterEvent = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="you@example.com"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Phone
                 </label>
                 <input
@@ -372,20 +396,80 @@ const RegisterEvent = () => {
                 )}
               </button>
 
-              {/* Add-ons prompt */}
-              <div className="mt-4 border-t border-orange-100 pt-4 text-center">
-                <p className="text-xs text-gray-500 mb-2">
-                  Want a certificate of participation or a one-on-one session
-                  with our keynote speaker?
-                </p>
-                <Link
-                  to={`/event-extras?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline transition"
+              {/* Add-ons prompt — eye-catching gradient banner */}
+              <div className="mt-5">
+                <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-amber-400 to-orange-500 p-5 text-white shadow-lg shadow-orange-200/60">
+                  <div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/10" />
+                  <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10" />
+                  <div className="flex items-center gap-3 mb-3 relative">
+                    <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-2.5 py-2">
+                      <Award size={18} className="text-white" />
+                      <Mic2 size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm leading-tight">
+                        Get a Certificate or Book a Speaker Session!
+                      </p>
+                      <p className="text-xs text-white/80 mt-0.5">
+                        Limited slots — don't miss out!
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    to={`/event-extras?eventId=${eventId}&title=${eventTitle}&name=${encodeURIComponent(form.name)}`}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-orange-500 font-bold text-sm py-2.5 rounded-xl hover:bg-orange-50 transition shadow-sm relative"
+                  >
+                    <Award size={14} />
+                    <Mic2 size={14} />
+                    Click here to book / pay →
+                  </Link>
+                </div>
+              </div>
+
+              {/* WhatsApp links */}
+              <div className="mt-4 space-y-2.5">
+                <a
+                  href="https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition group"
                 >
-                  <Award size={14} />
-                  <Mic2 size={14} />
-                  Click here to book →
-                </Link>
+                  <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shrink-0 text-white font-bold text-base">
+                    W
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-gray-800">
+                      Join Event Community
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Get updates on WhatsApp
+                    </p>
+                  </div>
+                  <span className="text-green-600 text-xs font-semibold group-hover:translate-x-0.5 transition">
+                    Join →
+                  </span>
+                </a>
+                <a
+                  href="https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#128C7E] flex items-center justify-center shrink-0 text-white font-bold text-base">
+                    V
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-gray-800">
+                      Join Volunteer Team
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Be part of the team!
+                    </p>
+                  </div>
+                  <span className="text-green-600 text-xs font-semibold group-hover:translate-x-0.5 transition">
+                    Join →
+                  </span>
+                </a>
               </div>
             </form>
           </div>

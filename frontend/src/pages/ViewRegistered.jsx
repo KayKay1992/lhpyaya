@@ -9,7 +9,6 @@ import yayaLogo from "../assets/yaya.png";
 import {
   ArrowLeft,
   Users,
-  Mail,
   Phone,
   User,
   Trash2,
@@ -81,10 +80,8 @@ const ViewRegistered = () => {
     }
   };
 
-  const filtered = registrants.filter(
-    (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email.toLowerCase().includes(search.toLowerCase()),
+  const filtered = registrants.filter((r) =>
+    r.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -174,7 +171,7 @@ const ViewRegistered = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name or email..."
+                placeholder="Search by name..."
                 className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
               />
             </div>
@@ -192,12 +189,9 @@ const ViewRegistered = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {/* Table Header */}
-              <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <span className="flex items-center gap-1.5">
                   <User size={12} /> Name
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Mail size={12} /> Email
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Phone size={12} /> Phone
@@ -210,12 +204,9 @@ const ViewRegistered = () => {
                 <span></span>
               </div>
               {/* Mobile header */}
-              <div className="grid sm:hidden grid-cols-[1fr_1fr_1fr_72px_60px] gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="grid sm:hidden grid-cols-[1fr_1fr_72px_60px] gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <span className="flex items-center gap-1">
                   <User size={11} /> Name
-                </span>
-                <span className="flex items-center gap-1">
-                  <Mail size={11} /> Email
                 </span>
                 <span className="flex items-center gap-1">
                   <Phone size={11} /> Phone
@@ -237,12 +228,9 @@ const ViewRegistered = () => {
                     }`}
                   >
                     {/* Desktop row */}
-                    <div className="hidden sm:grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
+                    <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_90px_80px] gap-3 px-6 py-4 text-sm text-gray-700 items-center">
                       <span className="font-medium truncate" title={r.name}>
                         {r.name}
-                      </span>
-                      <span className="text-gray-500 truncate" title={r.email}>
-                        {r.email}
                       </span>
                       <span
                         className="text-gray-500 truncate"
@@ -293,15 +281,9 @@ const ViewRegistered = () => {
                       </div>
                     </div>
                     {/* Mobile row */}
-                    <div className="grid sm:hidden grid-cols-[1fr_1fr_1fr_72px_60px] gap-2 px-4 py-3 text-sm text-gray-700 items-center">
+                    <div className="grid sm:hidden grid-cols-[1fr_1fr_72px_60px] gap-2 px-4 py-3 text-sm text-gray-700 items-center">
                       <span className="font-medium truncate" title={r.name}>
                         {r.name}
-                      </span>
-                      <span
-                        className="text-gray-500 truncate text-xs"
-                        title={r.email}
-                      >
-                        {r.email}
                       </span>
                       <span
                         className="text-gray-500 truncate text-xs"

@@ -192,7 +192,7 @@ const RegisterEvent = () => {
               Stay updated with event info, reminders, and announcements.
             </p>
             <a
-              href="https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4"
+              href="https://chat.whatsapp.com/BNgu49pWizR6WypiCutHDe?s=cl&p=a&mlu=4"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center bg-[#25D366] hover:bg-green-500 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
@@ -216,7 +216,7 @@ const RegisterEvent = () => {
               WhatsApp group.
             </p>
             <a
-              href="https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F"
+              href="https://chat.whatsapp.com/J9o02sRit1gLCe26Lv8Y1F"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center bg-[#128C7E] hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
@@ -429,7 +429,7 @@ const RegisterEvent = () => {
               {/* WhatsApp links */}
               <div className="mt-4 space-y-2.5">
                 <a
-                  href="https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4"
+                  href="https://chat.whatsapp.com/BNgu49pWizR6WypiCutHDe?s=cl&p=a&mlu=4"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition group"
@@ -450,7 +450,7 @@ const RegisterEvent = () => {
                   </span>
                 </a>
                 <a
-                  href="https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F"
+                  href="https://chat.whatsapp.com/J9o02sRit1gLCe26Lv8Y1F"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition group"

@@ -39,11 +39,11 @@ const CreateEvent = () => {
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => formData.append(k, v));
       if (image) formData.append("image", image);
-      await api.post("/events", formData, {
+      const res = await api.post("/events", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Event created!");
-      navigate("/dashboard");
+      toast.success("Event created! Now add speakers below.");
+      navigate(`/edit-event/${res.data._id}`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create event");
     } finally {

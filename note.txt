@@ -1,114 +1,113 @@
-===================================================
-FEATURE: Registration Form & Success Page Overhaul
-===================================================
+====================================================
+  LHP-YAYA — IMPLEMENTATION NOTES
+====================================================
 
-User requests:
-  1. Make the add-ons link (certificate / speaker session) more unique
-     and visible on the registration page.
-  2. Remove the email field from the registration form so people without
-     email can register; update the admin view accordingly.
-  3. On the registration success page, ask the registrant to join the
-     WhatsApp event community and volunteer team.
-  4. Also show both WhatsApp links on the registration form page.
+----------------------------------------------------
+FEATURE: Event Description Redesign (RegisterEvent)
+----------------------------------------------------
+The plain white box showing the event description on the registration page
+has been replaced with a modern, eye-catching gradient card.
 
----
+What changed:
+- The description is now displayed inside a bold orange-to-amber gradient
+  card (rounded-3xl) with decorative circle accents behind it.
+- A Sparkles icon badge + "ABOUT THIS EVENT" label sits above the text.
+- Below the description, pill badges automatically show the event Date,
+  Time, and Location pulled directly from the database — so the visitor
+  gets all key facts at a glance without scrolling.
+- Text is white on the gradient background for strong contrast and
+  modern feel.
 
-WHAT WAS CHANGED
------------------
+File: frontend/src/pages/RegisterEvent.jsx
 
-── 1. Add-ons prompt redesigned (RegisterEvent.jsx) ──────────────────────
+----------------------------------------------------
+FEATURE: Meet the Speakers Section (RegisterEvent)
+----------------------------------------------------
+A full "Meet the Speakers" section was added to the registration page,
+appearing between the event description and the registration form.
 
-BEFORE: A small grey text line + plain underline link at the bottom of
-        the form card — easy to miss.
+What it does:
+- Fetches speakers from the event API (/api/events/:id) and displays
+  them as individual cards.
+- Each speaker card shows:
+    • Photo (or an orange avatar placeholder if no image uploaded)
+    • Full Name (bold)
+    • Role / Title / Bio (in primary orange colour)
+    • A mic icon accent on the right
+- "Register Now — Secure Your Spot!" buttons are interspersed
+  automatically in the speakers list: one after every 2 speakers,
+  and one final button at the bottom of the section.
+- Clicking any "Register Now" button smoothly scrolls the page down
+  to the registration form (using useRef + scrollIntoView).
+- If no speakers have been added by the admin, the section is hidden
+  entirely (no empty space shown).
 
-AFTER:  A bold gradient banner card (amber → orange) with:
-  • Two decorative semi-transparent circles in the background for depth.
-  • An icon badge showing both Award (certificate) and Mic2 (speaker) icons
-    side by side inside a frosted white/20 pill.
-  • Headline: "Get a Certificate or Book a Speaker Session!"
-  • Subtext:  "Limited slots — don't miss out!"
-  • A solid white button with orange text at the bottom of the card.
-  The contrast between the white button and the orange background makes
-  it impossible to miss while still fitting the app's colour scheme.
+Files changed:
+- frontend/src/pages/RegisterEvent.jsx
+  (added useRef, speakers state, scrollToForm helper, speakers JSX)
 
-── 2. Email removed ──────────────────────────────────────────────────────
+----------------------------------------------------
+FEATURE: Speaker Management — Admin (EditEvent)
+----------------------------------------------------
+A "Manage Speakers" panel was added at the bottom of the Edit Event page
+so the admin can add or remove speakers for any event.
 
-Three layers were updated:
+What the admin can do:
+- View all currently added speakers (photo, name, role).
+- Delete any speaker with the red trash button (instant API call,
+  no page reload needed).
+- Add a new speaker using the form at the bottom of the panel:
+    • Optional photo upload (image preview shown before saving)
+    • Full Name (required)
+    • Role / Title / Bio (optional, shown in orange on the public page)
+  Clicking "Add Speaker" sends the data directly to the API.
+  The speaker list updates immediately without refreshing the page.
+- There is no limit — the admin can add as many speakers as needed.
 
-  a) Backend — models/Registration.js
-     Changed email field from required:true → required:false, default:""
-     This means existing records keep their email; new records can omit it.
+Files changed:
+- frontend/src/pages/EditEvent.jsx
+  (added speakers state, speakerForm state, handleAddSpeaker,
+   handleDeleteSpeaker, and the full Manage Speakers UI section)
 
-  b) Backend — controllers/registrationController.js
-     - Removed email from the destructured request body.
-     - Removed the "!name || !email" validation check (now just "!name").
-     - Removed the duplicate-registration check that queried by email,
-       because without email there is no reliable unique identifier to
-       block duplicates on.
-     - Removed email from the Registration.create() call.
+----------------------------------------------------
+FEATURE: Auto-redirect to Edit Page After Event Creation
+----------------------------------------------------
+Previously, after creating a new event the admin was sent straight to
+the Dashboard with no opportunity to add speakers.
 
-  c) Frontend — pages/ViewRegistered.jsx (admin registrants table)
-     - Removed the Mail icon import from lucide-react.
-     - Removed email from the search/filter function (now searches name only).
-     - Updated the search input placeholder to "Search by name...".
-     - Removed the Email column header from both the desktop grid
-       (7-col → 6-col: grid-cols-[1fr_1fr_1fr_1fr_90px_80px]) and the
-       mobile grid (5-col → 4-col: grid-cols-[1fr_1fr_72px_60px]).
-     - Removed the email <span> cells from both the desktop and mobile
-       row layouts.
+Now, after a successful event creation, the admin is automatically
+redirected to the Edit Event page for that new event, where the
+Manage Speakers panel is immediately available.
 
-  d) Frontend — pages/RegisterEvent.jsx (registration form)
-     - Removed email: "" from the form state object.
-     - Deleted the entire email validation block (regex check).
-     - Deleted the Email input field from the JSX form.
+A toast message "Event created! Now add speakers below." confirms
+the action and guides the admin.
 
-── 3. WhatsApp links on the registration form (RegisterEvent.jsx) ────────
+File: frontend/src/pages/CreateEvent.jsx
 
-Added two clickable rows below the add-ons banner, inside the form card:
+----------------------------------------------------
+BACKEND: Speakers API Endpoints
+----------------------------------------------------
+Two new API endpoints were added to support speaker management:
 
-  Row 1 — Event Community
-    • Green circle avatar with "W", colour #25D366 (WhatsApp brand green).
-    • Label: "Join Event Community" / subtext: "Get updates on WhatsApp".
-    • Clicking opens: https://chat.whatsapp.com/BNgu49pWypiCutHDe?s=cl&p=a&mlu=4
-    • Opens in a new tab (target="_blank" rel="noopener noreferrer").
+  POST   /api/events/:id/speakers
+    — Adds a new speaker to the event.
+    — Accepts multipart/form-data with fields: name, title, image (file).
+    — Image is uploaded to Cloudinary (same storage as event banners).
+    — Returns the full updated event object.
+    — Protected: admin only.
 
-  Row 2 — Volunteer Team
-    • Teal circle avatar with "V", colour #128C7E (WhatsApp dark teal).
-    • Label: "Join Volunteer Team" / subtext: "Be part of the team!".
-    • Clicking opens: https://chat.whatsapp.com/j9o02sRit1gLCe26Lv8Y1F
+  DELETE /api/events/:id/speakers/:speakerId
+    — Removes a speaker by their subdocument _id.
+    — Returns the full updated event object.
+    — Protected: admin only.
 
-  Both rows use bg-green-50 with a green border, and include a small
-  "Join →" label on the right that shifts slightly on hover.
+Files changed:
+- backend/models/Event.js
+    (added speakers array: [{ name, title, image }])
+- backend/controllers/eventController.js
+    (added addSpeaker and deleteSpeaker functions)
+- backend/routes/eventRoutes.js
+    (registered the two new routes with protect + adminOnly middleware
+     and Cloudinary upload middleware)
 
-── 4. WhatsApp cards on the registration SUCCESS page (RegisterEvent.jsx) ─
-
-After the certificate and speaker booking prompt cards, two new styled
-cards were inserted before the "Back to Events" button:
-
-  Card 1 — WhatsApp Community (green theme)
-    • bg-green-50, border-2 border-green-200.
-    • "W" badge in #25D366 background.
-    • Heading: "Join Our WhatsApp Community!"
-    • Description: "Stay updated with event info, reminders, and
-      announcements."
-    • Full-width button in #25D366 green: "Yes, Join Community →"
-    • Same community link as above.
-
-  Card 2 — Volunteer Team (teal theme)
-    • bg-teal-50, border-2 border-teal-200.
-    • "V" badge in #128C7E background.
-    • Heading: "Do You Want to Join Our Volunteer Team?"
-    • Description explains this is for the event team's WhatsApp group.
-    • Full-width button in #128C7E teal: "Yes, Join Volunteer Group →"
-    • Same volunteer link as above.
-
-  The speaker card's bottom margin was adjusted from mb-6 → mb-4 to
-  keep consistent spacing with the two new cards added after it.
-
----
-
-FILES CHANGED
-  backend/models/Registration.js
-  backend/controllers/registrationController.js
-  frontend/src/pages/RegisterEvent.jsx
-  frontend/src/pages/ViewRegistered.jsx
+====================================================

@@ -3,7 +3,15 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { PageSpinner, ButtonSpinner } from "../components/Spinner";
 import api from "../api";
 import toast from "react-hot-toast";
-import { ArrowLeft, CalendarDays, ImagePlus, LogOut } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ImagePlus,
+  LogOut,
+  UserRound,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import rccgLogo from "../assets/download (1).jpg";
 import yayaLogo from "../assets/yaya.png";
@@ -23,6 +31,15 @@ const EditEvent = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [speakers, setSpeakers] = useState([]);
+  const [speakerForm, setSpeakerForm] = useState({
+    name: "",
+    title: "",
+    image: null,
+    preview: null,
+  });
+  const [addingSpeaker, setAddingSpeaker] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     api
@@ -37,6 +54,7 @@ const EditEvent = () => {
           location: e.location,
         });
         if (e.image) setPreview(e.image);
+        if (e.speakers) setSpeakers(e.speakers);
       })
       .catch(() => toast.error("Failed to load event"))
       .finally(() => setFetching(false));
@@ -44,6 +62,53 @@ const EditEvent = () => {
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSpeakerImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSpeakerForm((prev) => ({
+      ...prev,
+      image: file,
+      preview: URL.createObjectURL(file),
+    }));
+  };
+
+  const handleAddSpeaker = async () => {
+    if (!speakerForm.name.trim()) {
+      toast.error("Speaker name is required");
+      return;
+    }
+    setAddingSpeaker(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", speakerForm.name.trim());
+      fd.append("title", speakerForm.title.trim());
+      if (speakerForm.image) fd.append("image", speakerForm.image);
+      const res = await api.post(`/events/${id}/speakers`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setSpeakers(res.data.speakers);
+      setSpeakerForm({ name: "", title: "", image: null, preview: null });
+      toast.success("Speaker added!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add speaker");
+    } finally {
+      setAddingSpeaker(false);
+    }
+  };
+
+  const handleDeleteSpeaker = async (speakerId) => {
+    setDeletingId(speakerId);
+    try {
+      const res = await api.delete(`/events/${id}/speakers/${speakerId}`);
+      setSpeakers(res.data.speakers);
+      toast.success("Speaker removed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove speaker");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -248,6 +313,156 @@ const EditEvent = () => {
                 {loading ? <ButtonSpinner label="Saving…" /> : "Save Changes"}
               </button>
             </form>
+          </div>
+
+          {/* ─── Manage Speakers ─── */}
+          <div className="mt-8 bg-white rounded-3xl shadow-xl border border-orange-100 p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-[#ff9324] flex items-center justify-center shrink-0">
+                <UserRound size={20} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Manage Speakers
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Add or remove speakers shown on the registration page
+                </p>
+              </div>
+            </div>
+
+            {/* Existing speakers */}
+            {speakers.length > 0 ? (
+              <div className="space-y-3 mb-6">
+                {speakers.map((spk) => (
+                  <div
+                    key={spk._id}
+                    className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-2xl px-4 py-3"
+                  >
+                    {spk.image ? (
+                      <img
+                        src={spk.image}
+                        alt={spk.name}
+                        className="w-12 h-12 rounded-xl object-cover border border-orange-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                        <UserRound size={20} className="text-[#ff9324]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {spk.name}
+                      </p>
+                      {spk.title && (
+                        <p className="text-xs text-[#ff9324] font-medium truncate">
+                          {spk.title}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteSpeaker(spk._id)}
+                      disabled={deletingId === spk._id}
+                      className="w-8 h-8 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center text-red-500 transition shrink-0 disabled:opacity-50"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 mb-6 bg-orange-50 rounded-2xl border border-dashed border-orange-200">
+                <UserRound size={28} className="text-orange-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No speakers added yet</p>
+              </div>
+            )}
+
+            {/* Add new speaker form */}
+            <div className="border-t border-orange-100 pt-5 space-y-4">
+              <p className="text-sm font-semibold text-gray-700">
+                Add a New Speaker
+              </p>
+
+              {/* Photo upload */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Photo{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <label className="cursor-pointer flex items-center gap-3 w-full border-2 border-dashed border-orange-200 rounded-2xl p-3 hover:border-[#ff9324] transition bg-orange-50 overflow-hidden">
+                  {speakerForm.preview ? (
+                    <img
+                      src={speakerForm.preview}
+                      alt="speaker"
+                      className="w-14 h-14 rounded-xl object-cover border border-orange-200"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <ImagePlus
+                        size={22}
+                        className="text-[#ff9324] opacity-60"
+                      />
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-400">
+                    {speakerForm.preview
+                      ? "Click to change photo"
+                      : "Click to upload speaker photo"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSpeakerImageChange}
+                  />
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Full Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={speakerForm.name}
+                  onChange={(e) =>
+                    setSpeakerForm((p) => ({ ...p, name: e.target.value }))
+                  }
+                  placeholder="e.g. Dr. Jane Smith"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Role / Title / Bio
+                </label>
+                <input
+                  type="text"
+                  value={speakerForm.title}
+                  onChange={(e) =>
+                    setSpeakerForm((p) => ({ ...p, title: e.target.value }))
+                  }
+                  placeholder="e.g. CEO, Pioneer Airline & Keynote Speaker"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddSpeaker}
+                disabled={addingSpeaker}
+                className="w-full flex items-center justify-center gap-2 bg-[#ff9324] hover:bg-orange-500 active:scale-95 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-200 disabled:opacity-60"
+              >
+                {addingSpeaker ? (
+                  <ButtonSpinner label="Adding…" />
+                ) : (
+                  <>
+                    <Plus size={16} /> Add Speaker
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

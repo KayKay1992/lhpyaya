@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
@@ -14,6 +14,9 @@ import {
   MapPin,
   Award,
   Mic2,
+  Sparkles,
+  ChevronRight,
+  UserRound,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import rccgLogo from "../assets/download (1).jpg";
@@ -29,9 +32,11 @@ const RegisterEvent = () => {
   const [success, setSuccess] = useState(false);
   const [eventImage, setEventImage] = useState(null);
   const [eventDetails, setEventDetails] = useState(null);
+  const [speakers, setSpeakers] = useState([]);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const formRef = useRef(null);
 
   const eventId = searchParams.get("eventId");
   const eventTitle = searchParams.get("title") || "Event";
@@ -48,10 +53,15 @@ const RegisterEvent = () => {
             location: res.data.location,
             description: res.data.description,
           });
+          if (res.data.speakers) setSpeakers(res.data.speakers);
         })
         .catch(() => {});
     }
   }, [eventId]);
+
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -313,17 +323,139 @@ const RegisterEvent = () => {
             </div>
           )}
 
-          {/* Event Description */}
+          {/* Event Description — modern redesign */}
           {eventDetails?.description && (
-            <div className="bg-white rounded-2xl border border-orange-100 shadow-sm px-6 py-4 mb-6">
-              <h2 className="text-sm font-semibold text-primary uppercase tracking-wide mb-2">
-                About this Event
-              </h2>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {eventDetails.description}
-              </p>
+            <div className="mb-8">
+              <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#ff9324] to-amber-500 p-6 text-white shadow-xl shadow-orange-200/60">
+                {/* decorative circles */}
+                <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
+                <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/10" />
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10" />
+                {/* heading */}
+                <div className="flex items-center gap-2 mb-3 relative">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Sparkles size={16} className="text-white" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-white/80">
+                    About This Event
+                  </span>
+                </div>
+                <p className="text-base font-medium leading-relaxed relative text-white/95">
+                  {eventDetails.description}
+                </p>
+                {/* info pills */}
+                <div className="flex flex-wrap gap-2 mt-4 relative">
+                  {eventDetails.date && (
+                    <span className="flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                      <CalendarDays size={12} />
+                      {new Date(eventDetails.date).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                  {eventDetails.time && (
+                    <span className="flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                      <Clock size={12} />
+                      {eventDetails.time}
+                    </span>
+                  )}
+                  {eventDetails.location && (
+                    <span className="flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                      <MapPin size={12} />
+                      {eventDetails.location}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Meet the Speakers */}
+          {speakers.length > 0 && (
+            <div className="mb-10">
+              {/* Section header */}
+              <div className="text-center mb-6">
+                <span className="inline-flex items-center gap-2 bg-orange-100 text-[#ff9324] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-3">
+                  <UserRound size={13} /> Meet the Speakers
+                </span>
+                <h2 className="text-2xl font-extrabold text-gray-900">
+                  Who You'll Hear From
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  World-class voices. Life-changing insights.
+                </p>
+              </div>
+
+              {/* Speaker cards with interspersed Register Now buttons */}
+              <div className="space-y-4">
+                {speakers.map((speaker, idx) => (
+                  <>
+                    {/* Register Now CTA after every 2nd speaker (and not before first) */}
+                    {idx > 0 && idx % 2 === 0 && (
+                      <div key={`cta-${idx}`} className="py-2">
+                        <button
+                          onClick={scrollToForm}
+                          className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#ff9324] to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-200/60 transition-all active:scale-95 text-sm"
+                        >
+                          <CalendarDays size={16} />
+                          Register Now — Secure Your Spot!
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
+                    <div
+                      key={speaker._id}
+                      className="flex items-center gap-4 bg-white rounded-2xl border border-orange-100 shadow-sm px-5 py-4 hover:shadow-md hover:border-orange-200 transition-all"
+                    >
+                      {/* Photo */}
+                      {speaker.image ? (
+                        <img
+                          src={speaker.image}
+                          alt={speaker.name}
+                          className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-orange-100"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
+                          <UserRound size={28} className="text-[#ff9324]" />
+                        </div>
+                      )}
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-base leading-tight">
+                          {speaker.name}
+                        </p>
+                        {speaker.title && (
+                          <p className="text-xs text-[#ff9324] font-semibold mt-0.5 leading-snug">
+                            {speaker.title}
+                          </p>
+                        )}
+                      </div>
+                      {/* Decorative accent */}
+                      <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                        <Mic2 size={16} className="text-[#ff9324]" />
+                      </div>
+                    </div>
+                  </>
+                ))}
+              </div>
+
+              {/* Final Register Now button */}
+              <button
+                onClick={scrollToForm}
+                className="mt-5 w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#ff9324] to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-200/60 transition-all active:scale-95 text-sm"
+              >
+                <CalendarDays size={16} />
+                Register Now — Secure Your Spot!
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Registration form anchor */}
+          <div ref={formRef} />
 
           {/* Header */}
           <div className="text-center mb-8">

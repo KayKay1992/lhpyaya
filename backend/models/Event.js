@@ -28,6 +28,13 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    speakers: [
+      {
+        name: { type: String, required: true, trim: true },
+        title: { type: String, default: "", trim: true },
+        image: { type: String, default: "" },
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

@@ -100,10 +100,54 @@ const deleteEvent = async (req, res) => {
   }
 };
 
+// @desc    Add a speaker to an event
+// @route   POST /api/events/:id/speakers
+// @access  Private (admin only)
+const addSpeaker = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    const { name, title } = req.body;
+    if (!name || !name.trim())
+      return res.status(400).json({ message: "Speaker name is required" });
+
+    event.speakers.push({
+      name: name.trim(),
+      title: title ? title.trim() : "",
+      image: req.file ? req.file.path : "",
+    });
+    await event.save();
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Delete a speaker from an event
+// @route   DELETE /api/events/:id/speakers/:speakerId
+// @access  Private (admin only)
+const deleteSpeaker = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    event.speakers = event.speakers.filter(
+      (s) => s._id.toString() !== req.params.speakerId,
+    );
+    await event.save();
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   getEvents,
   getEventById,
   createEvent,
   updateEvent,
   deleteEvent,
+  addSpeaker,
+  deleteSpeaker,
 };

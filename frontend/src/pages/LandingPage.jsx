@@ -29,12 +29,15 @@ const LandingPage = () => {
   }, []);
 
   const formatDate = (dateStr) => {
-    return new Date(dateStr.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return new Date(dateStr.slice(0, 10) + "T12:00:00").toLocaleDateString(
+      "en-US",
+      {
+        weekday: "short",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      },
+    );
   };
 
   return (

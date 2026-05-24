@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ButtonSpinner } from "../components/Spinner";
 import api from "../api";
@@ -396,10 +396,10 @@ const RegisterEvent = () => {
               {/* Speaker cards with interspersed Register Now buttons */}
               <div className="space-y-4">
                 {speakers.map((speaker, idx) => (
-                  <>
+                  <Fragment key={speaker._id}>
                     {/* Register Now CTA after every 2nd speaker (and not before first) */}
                     {idx > 0 && idx % 2 === 0 && (
-                      <div key={`cta-${idx}`} className="py-2">
+                      <div className="py-2">
                         <button
                           onClick={scrollToForm}
                           className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#ff9324] to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-200/60 transition-all active:scale-95 text-sm"
@@ -410,10 +410,7 @@ const RegisterEvent = () => {
                         </button>
                       </div>
                     )}
-                    <div
-                      key={speaker._id}
-                      className="flex items-center gap-4 bg-white rounded-2xl border border-orange-100 shadow-sm px-5 py-4 hover:shadow-md hover:border-orange-200 transition-all"
-                    >
+                    <div className="flex items-center gap-4 bg-white rounded-2xl border border-orange-100 shadow-sm px-5 py-4 hover:shadow-md hover:border-orange-200 transition-all">
                       {/* Photo */}
                       {speaker.image ? (
                         <img
@@ -442,7 +439,7 @@ const RegisterEvent = () => {
                         <Mic2 size={16} className="text-[#ff9324]" />
                       </div>
                     </div>
-                  </>
+                  </Fragment>
                 ))}
               </div>
 

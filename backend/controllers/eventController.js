@@ -115,7 +115,7 @@ const addSpeaker = async (req, res) => {
     event.speakers.push({
       name: name.trim(),
       title: title ? title.trim() : "",
-      image: req.file ? req.file.path : "",
+      image: req.file ? req.file.secure_url || req.file.path : "",
     });
     await event.save();
     res.status(200).json(event);

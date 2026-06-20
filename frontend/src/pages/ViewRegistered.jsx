@@ -80,8 +80,10 @@ const ViewRegistered = () => {
     }
   };
 
-  const filtered = registrants.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = registrants.filter(
+    (r) =>
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      (r.phone && r.phone.includes(search)),
   );
 
   return (
@@ -171,7 +173,7 @@ const ViewRegistered = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name..."
+                placeholder="Search by name or phone number..."
                 className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#ff9324] focus:border-transparent transition"
               />
             </div>

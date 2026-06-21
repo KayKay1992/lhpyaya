@@ -6,6 +6,7 @@ import yayaLogo from "../assets/yaya.png";
 const EventAddons = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
 
   const eventId = searchParams.get("eventId") || "";
   const eventTitle = searchParams.get("title") || "Event";

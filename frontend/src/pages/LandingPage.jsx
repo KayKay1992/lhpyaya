@@ -37,7 +37,7 @@ const LandingPage = () => {
         month: "long",
         day: "numeric",
       },
-    );
+    ); 
   };
 
   return (

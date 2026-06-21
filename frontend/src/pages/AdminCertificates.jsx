@@ -133,7 +133,7 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
     .content {
       position: relative; z-index: 10; height: 100%;
       display: flex; flex-direction: column; align-items: center;
-      padding: 22px 108px 16px;
+      padding: 22px 108px 22px;
     }
 
     /* Logos row */
@@ -171,7 +171,7 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
     .desc strong { color: #0c2368; font-weight: 700; }
 
     /* Footer */
-    .footer { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: auto; padding: 0 8px; }
+    .footer { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: 16px; padding: 0 8px; }
 
     .sig-block { text-align: center; width: 218px; }
     .sig-sign { font-family: 'Dancing Script', cursive; font-size: 31px; font-weight: 700; color: #0c2368; line-height: 1.2; margin-bottom: 3px; }

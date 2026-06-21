@@ -133,7 +133,7 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
     .content {
       position: relative; z-index: 10; height: 100%;
       display: flex; flex-direction: column; align-items: center;
-      padding: 22px 108px 22px;
+      padding: 22px 108px 8px;
     }
 
     /* Logos row */
@@ -308,7 +308,7 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
 
       <!-- Left: Capt. Henry signature -->
       <div class="sig-block">
-        <div class="sig-sign">Haf. H. Okobaundu</div>
+        <div class="sig-sign">Okobaundu</div>
         <div class="sig-hr"></div>
         <div class="sig-name">CAPT. HENRY UNGBUKU OKOBAUNDU</div>
         <div class="sig-role">Group Managing Director</div>

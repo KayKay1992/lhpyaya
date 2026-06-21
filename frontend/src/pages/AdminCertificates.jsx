@@ -33,18 +33,29 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
 
     body {
       background: #8a8a8a;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: flex-start; justify-content: center;
       min-height: 100vh;
+      padding: 20px 0;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
 
+    /* ── RESPONSIVE WRAPPER ─────────────────────────── */
+    .cert-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
     /* ── CERTIFICATE SHELL ─────────────────────────── */
     .cert {
-      width: 1060px; height: 750px;
+      width: 1060px; height: auto;
       position: relative; overflow: hidden;
       background: #ffffff;
       font-family: 'Raleway', sans-serif;
+      flex-shrink: 0;
+      transform-origin: top center;
     }
 
     /* ── BLUE SIDE PANELS ──────────────────────────── */
@@ -131,9 +142,9 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
 
     /* ── CONTENT ───────────────────────────────────── */
     .content {
-      position: relative; z-index: 10; height: 100%;
+      position: relative; z-index: 10;
       display: flex; flex-direction: column; align-items: center;
-      padding: 22px 108px 8px;
+      padding: 22px 108px 34px;
     }
 
     /* Logos row */
@@ -208,6 +219,7 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
   </style>
 </head>
 <body>
+<div class="cert-wrapper">
 <div class="cert">
 
   <!-- ── BLUE LEFT PANEL ───────────────────────── -->
@@ -345,8 +357,28 @@ const generateCertificateHTML = (request, rccgLogoUrl, yayaLogoUrl) => {
   </div><!-- /content -->
 
 </div><!-- /cert -->
+</div><!-- /cert-wrapper -->
 <script>
-  document.fonts.ready.then(() => setTimeout(() => window.print(), 700));
+  function scaleCert() {
+    var cert = document.querySelector('.cert');
+    var wrapper = document.querySelector('.cert-wrapper');
+    var vw = window.innerWidth;
+    if (vw < 1080) {
+      var scale = (vw - 16) / 1060;
+      cert.style.transform = 'scale(' + scale + ')';
+      cert.style.transformOrigin = 'top center';
+      wrapper.style.height = Math.ceil(cert.offsetHeight * scale) + 'px';
+    } else {
+      cert.style.transform = '';
+      cert.style.transformOrigin = '';
+      wrapper.style.height = '';
+    }
+  }
+  window.addEventListener('resize', scaleCert);
+  document.fonts.ready.then(function() {
+    scaleCert();
+    setTimeout(function() { window.print(); }, 700);
+  });
 </script>
 </body>
 </html>`;
